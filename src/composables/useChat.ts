@@ -11,6 +11,7 @@ import live2d from '@/utils/live2d'
 
 import { INVOKE_KEY } from '../constants'
 import { showWindow } from '../plugins/window'
+import { buildSystemPrompt, dreamCheck, loadPersistedRounds, recordRound, refreshDigest, syncMemoryFromDisk } from './useChatMemory'
 
 export type ChatStatus = 'idle' | 'thinking' | 'talking'
 
@@ -163,13 +164,25 @@ export function useChat() {
     const messages = [...history.value, { role: 'user' as const, content: question }]
 
     try {
+      // 先从盘上同步记忆（做梦可能在别的窗口写盘）
+      await syncMemoryFromDisk()
+
       const reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
         apiUrl: aiStore.apiUrl,
-        system: aiStore.systemPersona,
+        system: buildSystemPrompt(aiStore.systemPersona),
         messages,
       })
 
-      history.value = [...messages, { role: 'assistant' as const, content: reply }].slice(-HISTORY_ROUNDS * 2)
+      const nextHistory = [...messages, { role: 'assistant' as const, content: reply }]
+
+      // 窗口溢出的轮次先落盘（diary），再 re-distill 进滚动摘要（内部自带质量守卫）
+      const dropped = nextHistory.slice(0, Math.max(0, nextHistory.length - HISTORY_ROUNDS * 2))
+
+      history.value = nextHistory.slice(-HISTORY_ROUNDS * 2)
+
+      void recordRound(question, reply)
+
+      void refreshDigest(dropped)
 
       status.value = 'talking'
 
@@ -226,19 +239,26 @@ export function useChat() {
     nextProactiveAt = Date.now() + minutes * 60_000
   }
 
-  async function checkProactive() {
+  async function checkProactive(idleSeconds: number | null) {
     if (!aiStore.enabled || !aiStore.proactive.enabled) return
 
     if (status.value !== 'idle' || inputVisible.value) return
 
     if (Date.now() < nextProactiveAt) return
 
-    // 系统空闲查询（GetLastInputInfo，无全局钩子）；null（非 Windows）视为空闲，到点即说
-    const idleSeconds = await invoke<number | null>(INVOKE_KEY.GET_IDLE_SECONDS).catch(() => null)
-
     if (idleSeconds !== null && idleSeconds < PROACTIVE_IDLE_SECONDS) return
 
     void ask(pickProactivePrompt())
+  }
+
+  /** 每分钟心跳：查一次系统空闲，喂给主动搭话和空闲做梦两条链 */
+  async function onMinuteTick() {
+    // 系统空闲查询（GetLastInputInfo，无全局钩子）；null（非 Windows）视为空闲
+    const idleSeconds = await invoke<number | null>(INVOKE_KEY.GET_IDLE_SECONDS).catch(() => null)
+
+    void dreamCheck(idleSeconds)
+
+    await checkProactive(idleSeconds)
   }
 
   if (!initialized) {
@@ -246,7 +266,12 @@ export function useChat() {
 
     scheduleProactive()
 
-    proactiveCheckTimer = setInterval(checkProactive, PROACTIVE_CHECK_INTERVAL)
+    proactiveCheckTimer = setInterval(onMinuteTick, PROACTIVE_CHECK_INTERVAL)
+
+    // 恢复上次会话的最近对话（Layer 0：重启不清零）
+    void loadPersistedRounds(HISTORY_ROUNDS * 2).then((messages) => {
+      if (messages.length && !history.value.length) history.value = messages
+    })
 
     useEventListener(window, 'blur', () => {
       inputVisible.value = false

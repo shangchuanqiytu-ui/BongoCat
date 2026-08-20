@@ -10,6 +10,8 @@ export interface AiStore {
   apiUrl: string
   /** 人设 system prompt */
   systemPersona: string
+  /** 跨会话记忆（diary/digest/memory 做梦链路总开关） */
+  memoryEnabled: boolean
   proactive: {
     /** 定时主动搭话开关 */
     enabled: boolean
@@ -31,6 +33,8 @@ export const useAiStore = defineStore('ai', () => {
 
   const systemPersona = ref(DEFAULT_SYSTEM_PERSONA)
 
+  const memoryEnabled = ref(true)
+
   const proactive = reactive<AiStore['proactive']>({
     enabled: true,
     minInterval: 25,
@@ -42,6 +46,7 @@ export const useAiStore = defineStore('ai', () => {
     shortcut,
     apiUrl,
     systemPersona,
+    memoryEnabled,
     proactive,
   }
 })

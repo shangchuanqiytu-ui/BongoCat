@@ -21,13 +21,29 @@
           "proactive": "Proactive Chat",
           "apiSettings": "API Settings",
           "apiUrl": "API URL",
-          "systemPersona": "Persona Prompt"
+          "systemPersona": "Persona Prompt",
+          "memorySettings": "Memory",
+          "memoryEnabled": "Cross-session Memory",
+          "memoryContent": "Long-term Memory",
+          "digest": "Recent Conversation Digest",
+          "dreams": "Dream Diary",
+          "save": "Save",
+          "clear": "Clear Memory",
+          "dream": "Dream Now",
+          "dreamNoResult": "Nothing worth remembering for now~"
         },
         "hints": {
           "enabled": "When enabled, click the pet or press the shortcut to chat.",
           "proactive": "When enabled, the bunny will start a chat while you are idle.",
           "apiUrl": "Chat API endpoint (Anthropic Messages protocol relay).",
-          "systemPersona": "Defines the bunny's personality and speaking style."
+          "systemPersona": "Defines the bunny's personality and speaking style.",
+          "memoryEnabled": "The bunny remembers your chats and consolidates them into long-term memory while idle.",
+          "memoryContent": "Maintained by the bunny (also editable by hand) and included in every conversation.",
+          "digest": "Recent messages beyond the chat window are compressed into this digest.",
+          "dreams": "Little diary entries the bunny writes while consolidating memories. Purely adorable.",
+          "memorySaved": "The bunny's memory has been updated.",
+          "clearConfirm": "The bunny will forget everything remembered about you. Continue?",
+          "dreamPromoted": "The bunny remembered {count} things~"
         }
       },
       "cat": {

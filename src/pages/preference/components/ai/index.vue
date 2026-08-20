@@ -1,11 +1,88 @@
 <script setup lang="ts">
-import { Divider, Flex, Input, InputNumber, SpaceAddon, SpaceCompact, Switch, TextArea } from 'antdv-next'
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { Button, Divider, Flex, Input, InputNumber, message, Popconfirm, SpaceAddon, SpaceCompact, Switch, TextArea } from 'antdv-next'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import ProListItem from '@/components/pro-list-item/index.vue'
 import ProList from '@/components/pro-list/index.vue'
+import { clearMemory, getDigestContent, getDreamsContent, getMemoryContent, initChatMemory, runDream, setMemoryContent } from '@/composables/useChatMemory'
 import { useAiStore } from '@/stores/ai'
 
+const { t } = useI18n()
+
 const aiStore = useAiStore()
+
+const memoryText = ref('')
+
+const digestText = ref('')
+
+const dreamsText = ref('')
+
+const dreaming = ref(false)
+
+async function refreshMemoryViews() {
+  await initChatMemory()
+
+  memoryText.value = getMemoryContent()
+
+  digestText.value = getDigestContent()
+
+  dreamsText.value = getDreamsContent()
+}
+
+// 窗口常驻只挂载一次，重新聚焦时刷新（做梦可能在挂载后才写盘）
+let unlisten: (() => void) | undefined
+
+onMounted(async () => {
+  await refreshMemoryViews()
+
+  unlisten = await getCurrentWebviewWindow().onFocusChanged(({ payload }) => {
+    if (payload) void refreshMemoryViews()
+  })
+})
+
+onUnmounted(() => {
+  unlisten?.()
+})
+
+async function saveMemory() {
+  await setMemoryContent(memoryText.value)
+
+  memoryText.value = getMemoryContent()
+
+  message.success(t('pages.preference.ai.hints.memorySaved'))
+}
+
+async function onClear() {
+  await clearMemory()
+
+  memoryText.value = ''
+
+  digestText.value = ''
+
+  dreamsText.value = ''
+
+  message.success(t('pages.preference.ai.hints.memorySaved'))
+}
+
+async function onDream() {
+  dreaming.value = true
+
+  try {
+    const { promoted } = await runDream(true)
+
+    await refreshMemoryViews()
+
+    if (promoted > 0) {
+      message.success(t('pages.preference.ai.hints.dreamPromoted', { count: promoted }))
+    } else {
+      message.info(t('pages.preference.ai.labels.dreamNoResult'))
+    }
+  } finally {
+    dreaming.value = false
+  }
+}
 </script>
 
 <template>
@@ -72,6 +149,88 @@ const aiStore = useAiStore()
       <TextArea
         v-model:value="aiStore.systemPersona"
         :autosize="{ minRows: 3, maxRows: 8 }"
+      />
+    </ProListItem>
+  </ProList>
+
+  <ProList :title="$t('pages.preference.ai.labels.memorySettings')">
+    <ProListItem
+      :description="$t('pages.preference.ai.hints.memoryEnabled')"
+      :title="$t('pages.preference.ai.labels.memoryEnabled')"
+    >
+      <Switch v-model:checked="aiStore.memoryEnabled" />
+    </ProListItem>
+
+    <ProListItem
+      :description="$t('pages.preference.ai.hints.memoryContent')"
+      :title="$t('pages.preference.ai.labels.memoryContent')"
+      vertical
+    >
+      <div class="w-full flex flex-col gap-2">
+        <TextArea
+          v-model:value="memoryText"
+          :autosize="{ minRows: 4, maxRows: 10 }"
+          class="w-full"
+        />
+
+        <Flex
+          gap="small"
+          justify="end"
+        >
+          <Button
+            size="small"
+            @click="saveMemory"
+          >
+            {{ $t('pages.preference.ai.labels.save') }}
+          </Button>
+
+          <Popconfirm
+            :title="$t('pages.preference.ai.hints.clearConfirm')"
+            @confirm="onClear"
+          >
+            <Button
+              danger
+              size="small"
+            >
+              {{ $t('pages.preference.ai.labels.clear') }}
+            </Button>
+          </Popconfirm>
+
+          <Button
+            :loading="dreaming"
+            size="small"
+            @click="onDream"
+          >
+            {{ $t('pages.preference.ai.labels.dream') }}
+          </Button>
+        </Flex>
+      </div>
+    </ProListItem>
+
+    <ProListItem
+      :description="$t('pages.preference.ai.hints.digest')"
+      :title="$t('pages.preference.ai.labels.digest')"
+      vertical
+    >
+      <TextArea
+        :autosize="{ minRows: 2, maxRows: 6 }"
+        class="w-full"
+        readonly
+        :value="digestText"
+      />
+    </ProListItem>
+
+    <ProListItem
+      v-if="dreamsText"
+      :description="$t('pages.preference.ai.hints.dreams')"
+      :title="$t('pages.preference.ai.labels.dreams')"
+      vertical
+    >
+      <TextArea
+        :autosize="{ minRows: 2, maxRows: 6 }"
+        class="w-full"
+        readonly
+        :value="dreamsText"
       />
     </ProListItem>
   </ProList>

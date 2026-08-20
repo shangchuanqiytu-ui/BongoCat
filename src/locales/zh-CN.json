@@ -21,13 +21,29 @@
           "proactive": "主动搭话",
           "apiSettings": "接口设置",
           "apiUrl": "API 地址",
-          "systemPersona": "人设提示词"
+          "systemPersona": "人设提示词",
+          "memorySettings": "记忆",
+          "memoryEnabled": "跨会话记忆",
+          "memoryContent": "长期记忆",
+          "digest": "近期对话摘要",
+          "dreams": "做梦日记",
+          "save": "保存",
+          "clear": "清空记忆",
+          "dream": "立即做梦",
+          "dreamNoResult": "暂时没什么想记的～"
         },
         "hints": {
           "enabled": "启用后，点击宠物或按快捷键即可对话。",
           "proactive": "启用后，兔兔会在你长时间空闲时主动找你聊天。",
           "apiUrl": "对话接口地址（Anthropic Messages 协议中转）。",
-          "systemPersona": "定义兔兔的性格与说话风格。"
+          "systemPersona": "定义兔兔的性格与说话风格。",
+          "memoryEnabled": "兔兔会记住聊过的事，空闲时自动整理成长期记忆。",
+          "memoryContent": "兔兔自己维护的记忆（也可手动编辑），每次对话都会带上。",
+          "digest": "超出对话窗口的近期内容会被压缩成这份摘要。",
+          "dreams": "兔兔整理记忆时写的小日记，纯属可爱。",
+          "memorySaved": "已更新兔兔的记忆。",
+          "clearConfirm": "清空后兔兔会忘掉记住的博士，确定吗？",
+          "dreamPromoted": "兔兔记住了 {count} 件事～"
         }
       },
       "cat": {
