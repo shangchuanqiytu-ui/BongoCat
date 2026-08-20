@@ -10,15 +10,18 @@ import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import { round } from 'es-toolkit'
 import { nth } from 'es-toolkit/compat'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { useAppMenu } from '@/composables/useAppMenu'
+import { useChat } from '@/composables/useChat'
 import { useDevice } from '@/composables/useDevice'
 import { useGamepad } from '@/composables/useGamepad'
+import { useKeyPress } from '@/composables/useKeyPress'
 import { useModel } from '@/composables/useModel'
 import { useTauriListen } from '@/composables/useTauriListen'
 import { LISTEN_KEY } from '@/constants'
 import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from '@/plugins/window'
+import { useAiStore } from '@/stores/ai'
 import { useCatStore } from '@/stores/cat'
 import { useGeneralStore } from '@/stores/general.ts'
 import { useModelStore } from '@/stores/model'
@@ -27,6 +30,9 @@ import live2d from '@/utils/live2d'
 import { join } from '@/utils/path'
 import { isWindows } from '@/utils/platform'
 import { clearObject } from '@/utils/shared'
+
+import ChatBubble from './components/ChatBubble.vue'
+import ChatInput from './components/ChatInput.vue'
 
 const { startListening } = useDevice()
 const appWindow = getCurrentWebviewWindow()
@@ -38,6 +44,15 @@ const generalStore = useGeneralStore()
 const resizing = ref(false)
 const backgroundImagePath = ref<string>()
 const { stickActive } = useGamepad()
+const aiStore = useAiStore()
+const chat = useChat()
+
+// AI 对话唤起快捷键（总开关关闭时不注册）
+useKeyPress(computed(() => {
+  return aiStore.enabled ? aiStore.shortcut : undefined
+}), () => {
+  void chat.openInput()
+})
 
 onMounted(startListening)
 
@@ -138,8 +153,39 @@ useTauriListen<number>(LISTEN_KEY.SET_EXPRESSION, ({ payload }) => {
   live2d.setExpression(payload)
 })
 
-function handleMouseDown() {
-  appWindow.startDragging()
+// 点击 vs 拖拽：mousedown 只记录，按住左键位移超过阈值才 startDragging；
+// 原地短按左键视为点击宠物（唤起对话）。原生拖拽期间 webview 收不到事件，无法事后测距
+const CLICK_DRAG_THRESHOLD = 5
+const CLICK_PRESS_MS = 500
+
+let mouseDownInfo: { x: number, y: number, time: number } | undefined
+
+let dragStarted = false
+
+function handleMouseDown(event: MouseEvent) {
+  if (event.button !== 0) {
+    appWindow.startDragging()
+
+    return
+  }
+
+  mouseDownInfo = { x: event.clientX, y: event.clientY, time: Date.now() }
+
+  dragStarted = false
+}
+
+function handleMouseUp(event: MouseEvent) {
+  const downInfo = mouseDownInfo
+
+  mouseDownInfo = void 0
+
+  if (event.button !== 0 || !downInfo) return
+
+  const isClick = !dragStarted && Date.now() - downInfo.time < CLICK_PRESS_MS
+
+  if (!isClick) return
+
+  void chat.openInput()
 }
 
 async function handleContextmenu(event: MouseEvent) {
@@ -171,49 +217,68 @@ async function handleContextmenu(event: MouseEvent) {
 function handleMouseMove(event: MouseEvent) {
   const { buttons, shiftKey, movementX, movementY } = event
 
-  if (buttons !== 2 || !shiftKey) return
+  if (buttons === 2 && shiftKey) {
+    const delta = (movementX + movementY) * 0.5
+    const nextScale = Math.max(10, Math.min(catStore.window.scale + delta, 500))
 
-  const delta = (movementX + movementY) * 0.5
-  const nextScale = Math.max(10, Math.min(catStore.window.scale + delta, 500))
+    catStore.window.scale = round(nextScale)
 
-  catStore.window.scale = round(nextScale)
+    return
+  }
+
+  if (dragStarted || !mouseDownInfo || buttons !== 1) return
+
+  const distance = Math.hypot(event.clientX - mouseDownInfo.x, event.clientY - mouseDownInfo.y)
+
+  if (distance <= CLICK_DRAG_THRESHOLD) return
+
+  dragStarted = true
+
+  appWindow.startDragging()
 }
 </script>
 
 <template>
-  <div
-    class="relative size-screen overflow-hidden children:(absolute size-full)"
-    :class="{ '-scale-x-100': catStore.model.mirror }"
-    :style="{
-      opacity: catStore.window.opacity / 100,
-      borderRadius: `${catStore.window.radius}%`,
-    }"
-    @contextmenu="handleContextmenu"
-    @mousedown="handleMouseDown"
-    @mousemove="handleMouseMove"
-  >
-    <img
-      v-if="backgroundImagePath"
-      class="object-cover"
-      :src="backgroundImagePath"
-    >
-
-    <canvas id="live2dCanvas" />
-
-    <img
-      v-for="path in modelStore.pressedKeys"
-      :key="path"
-      class="object-cover"
-      :src="convertFileSrc(path)"
-    >
-
+  <!-- 外层不参与镜像/透明度：聊天气泡与输入框始终正向、清晰可见 -->
+  <div class="relative size-screen overflow-hidden">
     <div
-      v-show="resizing || !modelStore.modelReady"
-      class="flex items-center justify-center bg-black"
+      class="relative size-screen overflow-hidden children:(absolute size-full)"
+      :class="{ '-scale-x-100': catStore.model.mirror }"
+      :style="{
+        opacity: catStore.window.opacity / 100,
+        borderRadius: `${catStore.window.radius}%`,
+      }"
+      @contextmenu="handleContextmenu"
+      @mousedown="handleMouseDown"
+      @mousemove="handleMouseMove"
+      @mouseup="handleMouseUp"
     >
-      <span class="text-center text-[10vw] text-[#fff]">
-        {{ resizing ? $t('pages.main.hints.redrawing') : $t('pages.main.hints.switching') }}
-      </span>
+      <img
+        v-if="backgroundImagePath"
+        class="object-cover"
+        :src="backgroundImagePath"
+      >
+
+      <canvas id="live2dCanvas" />
+
+      <img
+        v-for="path in modelStore.pressedKeys"
+        :key="path"
+        class="object-cover"
+        :src="convertFileSrc(path)"
+      >
+
+      <div
+        v-show="resizing || !modelStore.modelReady"
+        class="flex items-center justify-center bg-black"
+      >
+        <span class="text-center text-[10vw] text-[#fff]">
+          {{ resizing ? $t('pages.main.hints.redrawing') : $t('pages.main.hints.switching') }}
+        </span>
+      </div>
     </div>
+
+    <ChatBubble />
+    <ChatInput />
   </div>
 </template>

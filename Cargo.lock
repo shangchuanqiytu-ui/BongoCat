@@ -411,6 +411,8 @@ dependencies = [
  "fs_extra",
  "gilrs",
  "rdev",
+ "reqwest",
+ "rustls",
  "serde",
  "serde_json",
  "tauri",

@@ -1,6 +1,11 @@
 {
   "pages": {
     "main": {
+      "chat": {
+        "placeholder": "Say something to the bunny...",
+        "thinking": "Let me think...",
+        "error": "Uh-oh... bad signal, try again later"
+      },
       "hints": {
         "redrawing": "Redrawing...",
         "switching": "Switching..."
@@ -8,6 +13,23 @@
     },
     "preference": {
       "title": "Preferences",
+      "ai": {
+        "title": "AI Chat",
+        "labels": {
+          "chatSettings": "Chat Settings",
+          "enabled": "Enable AI Chat",
+          "proactive": "Proactive Chat",
+          "apiSettings": "API Settings",
+          "apiUrl": "API URL",
+          "systemPersona": "Persona Prompt"
+        },
+        "hints": {
+          "enabled": "When enabled, click the pet or press the shortcut to chat.",
+          "proactive": "When enabled, the bunny will start a chat while you are idle.",
+          "apiUrl": "Chat API endpoint (Anthropic Messages protocol relay).",
+          "systemPersona": "Defines the bunny's personality and speaking style."
+        }
+      },
       "cat": {
         "title": "Cat",
         "labels": {

@@ -173,6 +173,16 @@ class Live2d {
     Config.MotionSound = enabled
   }
 
+  /** 直接设置模型参数（如说话时的 ParamMouthOpenY），覆盖优先级高于动作/表情。布尔会转 0/1（按键按下类参数） */
+  public setParameterValue(id: string, value: number | boolean, weight = 1) {
+    this.model?.setParameterValueById(id, Number(value), weight)
+  }
+
+  /** 取参数取值范围；模型没有该参数时返回 undefined */
+  public getParameterValueRange(id: string) {
+    return this.model?.getParameterValueRangeById(id) ?? undefined
+  }
+
   public setMaxFPS(fps: number) {
     Ticker.shared.maxFPS = fps
   }

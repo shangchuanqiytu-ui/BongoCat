@@ -1,0 +1,47 @@
+import { defineStore } from 'pinia'
+import { reactive, ref } from 'vue'
+
+export interface AiStore {
+  /** AI 对话总开关（关闭后点击/快捷键/主动搭话全部停用） */
+  enabled: boolean
+  /** 唤起对话输入框的全局快捷键（Tauri 键名格式） */
+  shortcut: string
+  /** API 中转地址（Anthropic Messages 协议） */
+  apiUrl: string
+  /** 人设 system prompt */
+  systemPersona: string
+  proactive: {
+    /** 定时主动搭话开关 */
+    enabled: boolean
+    /** 间隔下限（分钟） */
+    minInterval: number
+    /** 间隔上限（分钟） */
+    maxInterval: number
+  }
+}
+
+export const DEFAULT_SYSTEM_PERSONA = '你是桌面宠物兔兔（明日方舟的阿米娅风格），住在博士的电脑桌面上。用可爱、简短、口语化的中文回复，每次只说一到两句话、不超过40个字，可以适度用颜文字或兔兔相关口癖。称呼用户为"博士"。'
+
+export const useAiStore = defineStore('ai', () => {
+  const enabled = ref(true)
+
+  const shortcut = ref('Control+Alt+T')
+
+  const apiUrl = ref('http://127.0.0.1:18081')
+
+  const systemPersona = ref(DEFAULT_SYSTEM_PERSONA)
+
+  const proactive = reactive<AiStore['proactive']>({
+    enabled: true,
+    minInterval: 25,
+    maxInterval: 40,
+  })
+
+  return {
+    enabled,
+    shortcut,
+    apiUrl,
+    systemPersona,
+    proactive,
+  }
+})

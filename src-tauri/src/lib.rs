@@ -2,6 +2,7 @@ mod core;
 mod utils;
 
 use core::{
+    ai::ai_chat,
     device::start_device_listening,
     gamepad::{start_gamepad_listing, stop_gamepad_listing},
     prevent_default, setup,
@@ -29,6 +30,7 @@ pub fn run() {
         })
         .invoke_handler(generate_handler![
             copy_dir,
+            ai_chat,
             start_device_listening,
             start_gamepad_listing,
             stop_gamepad_listing

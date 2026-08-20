@@ -41,6 +41,11 @@ tauri-plugin-global-shortcut = "2"
 tauri-plugin-locale = "2"
 rdev = { git = "https://github.com/kunkunsh/rdev" }
 gilrs = { git = "https://github.com/ayangweb/gilrs", default-features = false, features = ["xinput"] }
+# AI 对话走本地 HTTP 中转（纯 http，无需 TLS 特性）
+reqwest = { version = "0.13", default-features = false, features = ["json"] }
+# tauri-plugin-updater 以 rustls-no-provider 启用 reqwest 的 rustls，宿主需自带 crypto provider
+# （ring 已在依赖树中，避免引入需要 cmake/nasm 的 aws-lc-rs）
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 
 [target."cfg(target_os = \"macos\")".dependencies]
 tauri-nspanel.workspace = true
