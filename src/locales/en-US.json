@@ -35,8 +35,6 @@
         "labels": {
           "modelSettings": "Model Settings",
           "mirrorMode": "Mirror Mode",
-          "mouseMirror": "Mouse Mirror",
-          "ignoreMouse": "Ignore Mouse Events",
           "windowSettings": "Window Settings",
           "passThrough": "Pass Through",
           "alwaysOnTop": "Always on Top",
@@ -46,21 +44,17 @@
           "opacity": "Opacity",
           "motionSound": "Motion Sound",
           "behavior": "Motions and Expressions",
-          "autoReleaseDelay": "Auto Release Delay",
           "hideOnHover": "Hide on Hover",
           "maxFPS": "Max Frame Rate"
         },
         "hints": {
           "mirrorMode": "When enabled, the model will be mirrored horizontally.",
-          "mouseMirror": "When enabled, the mouse will mirror the hand movement.",
-          "ignoreMouse": "When enabled, the model will not respond to mouse events. Useful for keyboard mode or gamepad mode.",
           "motionSound": "When enabled, the model will play corresponding sound effects when performing actions (if they exist).",
           "behavior": "When enabled, motions and expressions can be configured and triggered.",
           "passThrough": "When enabled, clicks pass through the window without affecting it.",
           "alwaysOnTop": "When enabled, the window stays above all other windows.",
           "keepInScreen": "When enabled, the window automatically stays within the screen boundaries.",
           "windowSize": "Move mouse to window edge, or hold Shift and right-drag to resize.",
-          "autoReleaseDelay": "On Windows, some system keys cannot capture release events and will auto-release after timeout.",
           "hideOnHover": "When enabled, the window hides automatically on mouse hover. You can set a delay; 0 means hide immediately.",
           "maxFPS": "Limit the maximum frame rate for model rendering. Lowering the frame rate can reduce CPU/GPU usage."
         }
@@ -74,12 +68,7 @@
           "showTrayIcon": "Show Tray Icon",
           "appearanceSettings": "Appearance Settings",
           "themeMode": "Theme Mode",
-          "language": "Language",
-          "updateSettings": "Update Settings",
-          "autoCheckUpdate": "Auto Check for Updates",
-          "permissionsSettings": "Permissions Settings",
-          "inputMonitoringPermission": "Input Monitoring Permission",
-          "administratorPermission": "Administrator"
+          "language": "Language"
         },
         "options": {
           "auto": "System",
@@ -88,23 +77,7 @@
         },
         "hints": {
           "showTaskbarIcon": "When enabled, the window can be captured via OBS Studio.",
-          "showTrayIcon": "When enabled, the app icon is displayed in the system tray.",
-          "inputMonitoringPermission": "Enable input monitoring to receive keyboard and mouse events from the system.",
-          "inputMonitoringPermissionGuide": "Input Monitoring permission is required for the app to receive keyboard and mouse events from the system.\n\nSteps:\n1. Open System Settings → Privacy & Security → Input Monitoring.\n2. If BongoCat already appears in the list, select it and click the \"-\" button to remove it.\n3. Click the \"+\" button to find and add BongoCat.\n4. Restart the app for the permission to take effect.",
-          "administratorPermission": "Running the app as administrator helps capture some system-level keys and input events more reliably.",
-          "administratorPermissionGuide": "To capture some system-level keys and input events more reliably, it is recommended to run the app as administrator.\n\nHow to do it:\n1. Exit the app first.\n2. Find the app exe or its shortcut in File Explorer.\n3. Choose how to launch:\n   • One-time: Right-click and choose \"Run as administrator\".\n   • Always (default): Right-click → Properties → Compatibility tab → check \"Run this program as an administrator\" → OK."
-        },
-        "status": {
-          "authorized": "Authorized",
-          "adminEnabled": "Enabled",
-          "authorize": "Go to Enable",
-          "viewGuide": "View Instructions"
-        },
-        "buttons": {
-          "openNow": "Open Now",
-          "openLater": "Open Later",
-          "setLater": "Set Up Later",
-          "exitApp": "Exit App"
+          "showTrayIcon": "When enabled, the app icon is displayed in the system tray."
         }
       },
       "model": {
@@ -164,7 +137,6 @@
           "copySuccess": "Copied Successfully"
         },
         "buttons": {
-          "checkUpdate": "Check for Updates",
           "copy": "Copy",
           "feedbackIssues": "Feedback Issues",
           "viewLog": "View Logs"
@@ -177,22 +149,6 @@
       "hints": {
         "pressRecordShortcut": "Press to record shortcut",
         "clickRecordShortcut": "Click to record shortcut"
-      }
-    },
-    "updateApp": {
-      "title": "New Version Found 🥳",
-      "labels": {
-        "updateVersion": "Update Version: ",
-        "updateTime": "Update Time: ",
-        "changelog": "Changelog: "
-      },
-      "hints": {
-        "checkingUpdates": "Checking for updates...",
-        "alreadyLatest": "Already on the latest version 🎉"
-      },
-      "buttons": {
-        "updateNow": "Update Now",
-        "updateLater": "Update Later"
       }
     }
   },
@@ -210,7 +166,6 @@
       }
     },
     "useTray": {
-      "checkUpdate": "Check for Updates",
       "openSource": "Open Source"
     }
   },

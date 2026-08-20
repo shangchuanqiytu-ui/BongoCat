@@ -13,8 +13,6 @@
         "labels": {
           "modelSettings": "模型設定",
           "mirrorMode": "鏡像模式",
-          "mouseMirror": "滑鼠游標鏡像",
-          "ignoreMouse": "忽略滑鼠事件",
           "windowSettings": "視窗設定",
           "passThrough": "視窗穿透",
           "alwaysOnTop": "視窗置頂",
@@ -24,21 +22,17 @@
           "opacity": "不透明度",
           "motionSound": "動作音效",
           "behavior": "動作與表情",
-          "autoReleaseDelay": "按鍵自動釋放延遲",
           "hideOnHover": "滑鼠游標移入隱藏",
           "maxFPS": "最大幀率"
         },
         "hints": {
           "mirrorMode": "啟用後，模型將水平鏡像翻轉。",
-          "mouseMirror": "啟用後，滑鼠游標將鏡像跟隨手部移動。",
-          "ignoreMouse": "啟用後，模型將不再回應滑鼠事件，適用於鍵盤模式或手柄模式。",
           "motionSound": "啟用後，模型執行動作時會播放對應音效（如果存在）。",
           "behavior": "啟用後，可以配置和觸發模型的動作與表情。",
           "passThrough": "啟用後，視窗不影響對其他應用程式的操作。",
           "alwaysOnTop": "啟用後，視窗始終顯示在其他應用程式上方。",
           "keepInScreen": "啟用後，視窗會自動調整位置，防止超出螢幕邊界。",
           "windowSize": "將滑鼠游標移至視窗邊緣，或按住 Shift 並右鍵拖曳，也可以調整視窗大小。",
-          "autoReleaseDelay": "由於 Windows 下部份系統級按鍵無法擷取釋放事件，超時後將自動視為已釋放。",
           "hideOnHover": "啟用後，滑鼠游標懸停視窗時自動隱藏。可設定延遲時間，0 表示立即隱藏。",
           "maxFPS": "限制模型渲染的最大幀率，降低幀率可以減少 CPU/GPU 佔用。"
         }
@@ -52,12 +46,7 @@
           "showTrayIcon": "顯示托盤圖示",
           "appearanceSettings": "外觀設定",
           "themeMode": "主題模式",
-          "language": "語言",
-          "updateSettings": "更新設定",
-          "autoCheckUpdate": "自動檢查更新",
-          "permissionsSettings": "權限設定",
-          "inputMonitoringPermission": "輸入監控權限",
-          "administratorPermission": "系統管理員身分"
+          "language": "語言"
         },
         "options": {
           "auto": "跟隨系統",
@@ -66,23 +55,7 @@
         },
         "hints": {
           "showTaskbarIcon": "啟用後，即可透過 OBS Studio 擷取視窗。",
-          "showTrayIcon": "啟用後，在系統托盤中顯示應用程式圖示。",
-          "inputMonitoringPermission": "開啟輸入監控權限，以便接收系統的鍵盤和滑鼠游標事件來回應您的操作。",
-          "inputMonitoringPermissionGuide": "開啟輸入監控權限後，應用程式才能接收系統的鍵盤和滑鼠事件，進而回應你的操作。\n\n操作方式：\n1. 開啟「系統設定」→「隱私權與安全性」→「輸入監控」。\n2. 若清單中已存在 BongoCat，請先選取它，點擊「-」按鈕將其刪除。\n3. 點擊「+」按鈕，找到並新增 BongoCat 應用程式。\n4. 重新啟動應用程式，以確保權限正式生效。",
-          "administratorPermission": "以系統管理員身分執行應用程式，可以更穩定地擷取部分系統層級按鍵與輸入事件。",
-          "administratorPermissionGuide": "為了能更穩定地擷取部分系統層級按鍵與輸入事件，建議以系統管理員身分執行應用程式。\n\n操作方式：\n1. 先退出應用程式。\n2. 在檔案總管中找到應用程式的 exe 或捷徑。\n3. 根據需求選擇啟動方式：\n   • 僅本次：右鍵並選擇「以系統管理員身分執行」。\n   • 永久預設：右鍵 → 內容 → 相容性索引標籤 → 勾選「以系統管理員身分執行此程式」→ 確定。"
-        },
-        "status": {
-          "authorized": "已授權",
-          "adminEnabled": "已啟用",
-          "authorize": "去授權",
-          "viewGuide": "查看操作說明"
-        },
-        "buttons": {
-          "openNow": "前往開啟",
-          "openLater": "稍後開啟",
-          "setLater": "稍後設置",
-          "exitApp": "退出應用"
+          "showTrayIcon": "啟用後，在系統托盤中顯示應用程式圖示。"
         }
       },
       "model": {
@@ -142,7 +115,6 @@
           "copySuccess": "複製成功"
         },
         "buttons": {
-          "checkUpdate": "檢查更新",
           "copy": "複製",
           "feedbackIssues": "回饋問題",
           "viewLog": "查看日誌"
@@ -155,22 +127,6 @@
       "hints": {
         "pressRecordShortcut": "按下錄製快速鍵",
         "clickRecordShortcut": "點擊錄製快速鍵"
-      }
-    },
-    "updateApp": {
-      "title": "發現新版本🥳",
-      "labels": {
-        "updateVersion": "更新版本：",
-        "updateTime": "更新時間：",
-        "changelog": "更新日誌："
-      },
-      "hints": {
-        "checkingUpdates": "正在檢查更新…",
-        "alreadyLatest": "目前已是最新版本🎉"
-      },
-      "buttons": {
-        "updateNow": "立即更新",
-        "updateLater": "稍後更新"
       }
     }
   },
@@ -188,7 +144,6 @@
       }
     },
     "useTray": {
-      "checkUpdate": "檢查更新",
       "openSource": "開源網址"
     }
   },

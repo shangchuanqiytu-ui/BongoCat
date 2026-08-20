@@ -4,7 +4,6 @@ import { Divider, Flex, InputNumber, Slider, SpaceAddon, SpaceCompact, Switch } 
 import ProListItem from '@/components/pro-list-item/index.vue'
 import ProList from '@/components/pro-list/index.vue'
 import { useCatStore } from '@/stores/cat'
-import { isWindows } from '@/utils/platform'
 
 const catStore = useCatStore()
 </script>
@@ -19,20 +18,6 @@ const catStore = useCatStore()
     </ProListItem>
 
     <ProListItem
-      :description="$t('pages.preference.cat.hints.mouseMirror')"
-      :title="$t('pages.preference.cat.labels.mouseMirror')"
-    >
-      <Switch v-model:checked="catStore.model.mouseMirror" />
-    </ProListItem>
-
-    <ProListItem
-      :description="$t('pages.preference.cat.hints.ignoreMouse')"
-      :title="$t('pages.preference.cat.labels.ignoreMouse')"
-    >
-      <Switch v-model:checked="catStore.model.ignoreMouse" />
-    </ProListItem>
-
-    <ProListItem
       :description="$t('pages.preference.cat.hints.motionSound')"
       :title="$t('pages.preference.cat.labels.motionSound')"
     >
@@ -44,21 +29,6 @@ const catStore = useCatStore()
       :title="$t('pages.preference.cat.labels.behavior')"
     >
       <Switch v-model:checked="catStore.model.behavior" />
-    </ProListItem>
-
-    <ProListItem
-      v-if="isWindows"
-      :description="$t('pages.preference.cat.hints.autoReleaseDelay')"
-      :title="$t('pages.preference.cat.labels.autoReleaseDelay')"
-    >
-      <SpaceCompact>
-        <InputNumber
-          v-model:value="catStore.model.autoReleaseDelay"
-          class="w-20"
-        />
-
-        <SpaceAddon>s</SpaceAddon>
-      </SpaceCompact>
     </ProListItem>
 
     <ProListItem

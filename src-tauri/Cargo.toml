@@ -22,30 +22,31 @@ tauri = { workspace = true, features = ["tray-icon", "protocol-asset", "macos-pr
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 tauri-plugin-custom-window.workspace = true
-tauri-plugin-admin-status.workspace = true
 tauri-plugin-os = "2"
 tauri-plugin-process = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-pinia = "3"
 tauri-plugin-log = "2"
-tauri-plugin-updater = "2"
 tauri-plugin-prevent-default = "1"
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
-tauri-plugin-macos-permissions = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 fs_extra = "1"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-locale = "2"
-rdev = { git = "https://github.com/kunkunsh/rdev" }
-gilrs = { git = "https://github.com/ayangweb/gilrs", default-features = false, features = ["xinput"] }
-# AI 对话走本地 HTTP 中转（纯 http，无需 TLS 特性）
-reqwest = { version = "0.13", default-features = false, features = ["json"] }
-# tauri-plugin-updater 以 rustls-no-provider 启用 reqwest 的 rustls，宿主需自带 crypto provider
-# （ring 已在依赖树中，避免引入需要 cmake/nasm 的 aws-lc-rs）
-rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+# AI 对话 API 地址支持 https：native-tls 在 Windows 走系统 SChannel（无额外构建依赖）；
+# 不要用 "rustls" feature——reqwest 0.13 的它会引入 aws-lc-rs，Windows 构建需要 cmake/nasm
+reqwest = { version = "0.13", default-features = false, features = ["json", "native-tls"] }
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_SystemInformation",
+] }
 
 [target."cfg(target_os = \"macos\")".dependencies]
 tauri-nspanel.workspace = true

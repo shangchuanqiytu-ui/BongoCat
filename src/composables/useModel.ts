@@ -1,11 +1,8 @@
-import type { PhysicalPosition } from '@tauri-apps/api/dpi'
-
 import { LogicalSize } from '@tauri-apps/api/dpi'
-import { resolveResource, sep } from '@tauri-apps/api/path'
+import { resolveResource } from '@tauri-apps/api/path'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { message } from 'antdv-next'
-import { isNil, round } from 'es-toolkit'
-import { findKey, nth } from 'es-toolkit/compat'
+import { round } from 'es-toolkit'
 import { ref } from 'vue'
 
 import { useCatStore } from '@/stores/cat'
@@ -173,112 +170,11 @@ export function useModel() {
     catStore.window.scale = scale
   }
 
-  const handlePress = (key: string) => {
-    const path = modelStore.supportKeys[key]
-
-    if (!path) return
-
-    const dirName = nth(path.split(sep()), -2)!
-    const prevKey = findKey(modelStore.pressedKeys, (value) => {
-      return value.includes(dirName)
-    })
-
-    if (prevKey) {
-      handleRelease(prevKey)
-    }
-
-    modelStore.pressedKeys[key] = path
-  }
-
-  const handleRelease = (key: string) => {
-    delete modelStore.pressedKeys[key]
-  }
-
-  function handleKeyChange(isLeft = true, pressed = true) {
-    const id = isLeft ? 'CatParamLeftHandDown' : 'CatParamRightHandDown'
-
-    live2d.setParameterValue(id, pressed)
-  }
-
-  function handleMouseChange(key: string, pressed = true) {
-    const id = key === 'Left' ? 'ParamMouseLeftDown' : 'ParamMouseRightDown'
-
-    live2d.setParameterValue(id, pressed)
-  }
-
-  async function handleMouseMove(cursorPoint: PhysicalPosition) {
-    const monitor = await getCursorMonitor(cursorPoint)
-
-    if (!monitor) return
-
-    const { size, position } = monitor
-
-    const xRatio = (cursorPoint.x - position.x) / size.width
-    const yRatio = (cursorPoint.y - position.y) / size.height
-
-    for (const id of [
-      'ParamMouseX',
-      'ParamMouseY',
-      'ParamAngleX',
-      'ParamAngleY',
-      'ParamAngleZ',
-      'ParamEyeBallX',
-      'ParamEyeBallY',
-    ]) {
-      const range = live2d.getParameterValueRange(id)
-
-      if (!range) continue
-
-      const { min, max } = range
-
-      if (isNil(min) || isNil(max)) continue
-
-      const isXAxis = id.endsWith('X')
-      const isYAxis = id.endsWith('Y')
-      const isZAxis = id.endsWith('Z')
-
-      let value: number
-
-      if (isZAxis) {
-        const dragX = 1 - 2 * xRatio
-        const dragY = 1 - 2 * yRatio
-
-        value = dragX * dragY * min
-      } else {
-        const ratio = isXAxis ? xRatio : yRatio
-
-        value = max - ratio * (max - min)
-      }
-
-      if (!isYAxis && catStore.model.mouseMirror) {
-        value *= -1
-      }
-
-      live2d.setParameterValue(id, value)
-    }
-  }
-
-  async function handleAxisChange(id: string, value: number) {
-    const range = live2d.getParameterValueRange(id)
-
-    if (!range) return
-
-    const { min, max } = range
-
-    live2d.setParameterValue(id, Math.max(min, value * max))
-  }
-
   return {
     modelSize,
-    handlePress,
-    handleRelease,
     handleLoad,
     handleDestroy,
     handleResize,
     handleAutoFit,
-    handleKeyChange,
-    handleMouseChange,
-    handleMouseMove,
-    handleAxisChange,
   }
 }

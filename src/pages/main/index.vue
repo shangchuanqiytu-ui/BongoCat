@@ -4,18 +4,15 @@ import type { MotionInfo } from 'easy-live2d'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { PhysicalSize } from '@tauri-apps/api/dpi'
 import { Menu, PredefinedMenuItem } from '@tauri-apps/api/menu'
-import { sep } from '@tauri-apps/api/path'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
-import { exists, readDir } from '@tauri-apps/plugin-fs'
+import { exists } from '@tauri-apps/plugin-fs'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import { round } from 'es-toolkit'
-import { nth } from 'es-toolkit/compat'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 import { useAppMenu } from '@/composables/useAppMenu'
 import { useChat } from '@/composables/useChat'
-import { useDevice } from '@/composables/useDevice'
-import { useGamepad } from '@/composables/useGamepad'
+import { useHoverHide } from '@/composables/useHoverHide'
 import { useKeyPress } from '@/composables/useKeyPress'
 import { useModel } from '@/composables/useModel'
 import { useTauriListen } from '@/composables/useTauriListen'
@@ -25,27 +22,25 @@ import { useAiStore } from '@/stores/ai'
 import { useCatStore } from '@/stores/cat'
 import { useGeneralStore } from '@/stores/general.ts'
 import { useModelStore } from '@/stores/model'
-import { isImage } from '@/utils/is'
 import live2d from '@/utils/live2d'
 import { join } from '@/utils/path'
 import { isWindows } from '@/utils/platform'
-import { clearObject } from '@/utils/shared'
 
 import ChatBubble from './components/ChatBubble.vue'
 import ChatInput from './components/ChatInput.vue'
 
-const { startListening } = useDevice()
 const appWindow = getCurrentWebviewWindow()
-const { modelSize, handleLoad, handleDestroy, handleResize, handleAutoFit, handleKeyChange } = useModel()
+const { modelSize, handleLoad, handleDestroy, handleResize, handleAutoFit } = useModel()
 const catStore = useCatStore()
 const { getBaseMenu, getExitMenu } = useAppMenu()
 const modelStore = useModelStore()
 const generalStore = useGeneralStore()
 const resizing = ref(false)
 const backgroundImagePath = ref<string>()
-const { stickActive } = useGamepad()
 const aiStore = useAiStore()
 const chat = useChat()
+
+useHoverHide()
 
 // AI 对话唤起快捷键（总开关关闭时不注册）
 useKeyPress(computed(() => {
@@ -53,8 +48,6 @@ useKeyPress(computed(() => {
 }), () => {
   void chat.openInput()
 })
-
-onMounted(startListening)
 
 onUnmounted(handleDestroy)
 
@@ -84,23 +77,6 @@ watch(() => modelStore.currentModel, async (model) => {
 
   backgroundImagePath.value = existed ? convertFileSrc(path) : void 0
 
-  clearObject([modelStore.supportKeys, modelStore.pressedKeys])
-
-  const resourcePath = join(model.path, 'resources')
-  const groups = ['left-keys', 'right-keys']
-
-  for await (const groupName of groups) {
-    const groupDir = join(resourcePath, groupName)
-    const files = await readDir(groupDir).catch(() => [])
-    const imageFiles = files.filter(file => isImage(file.name))
-
-    for (const file of imageFiles) {
-      const fileName = file.name.split('.')[0]
-
-      modelStore.supportKeys[fileName] = join(groupDir, file.name)
-    }
-  }
-
   modelStore.modelReady = true
 }, { deep: true, immediate: true })
 
@@ -116,18 +92,6 @@ watch([() => catStore.window.scale, modelSize], async ([scale, modelSize]) => {
     }),
   )
 }, { immediate: true })
-
-watch([modelStore.pressedKeys, stickActive], ([keys, stickActive]) => {
-  const dirs = Object.values(keys).map((path) => {
-    return nth(path.split(sep()), -2)!
-  })
-
-  const hasLeft = dirs.some(dir => dir.startsWith('left'))
-  const hasRight = dirs.some(dir => dir.startsWith('right'))
-
-  handleKeyChange(true, stickActive.left || hasLeft)
-  handleKeyChange(false, stickActive.right || hasRight)
-}, { deep: true })
 
 watch(() => catStore.window.visible, async (value) => {
   value ? showWindow() : hideWindow()
@@ -239,8 +203,10 @@ function handleMouseMove(event: MouseEvent) {
 </script>
 
 <template>
-  <!-- 外层不参与镜像/透明度：聊天气泡与输入框始终正向、清晰可见 -->
-  <div class="relative size-screen overflow-hidden">
+  <!-- 外层不参与镜像/透明度：聊天气泡与输入框始终正向、清晰可见。
+       近透明背景（视觉不可见）让窗口矩形进入合成器 hit-test，
+       否则透明窗口收不到真实鼠标（点击/拖拽/悬停隐藏全部失效） -->
+  <div class="relative size-screen overflow-hidden bg-[rgba(0,0,0,0.004)]">
     <div
       class="relative size-screen overflow-hidden children:(absolute size-full)"
       :class="{ '-scale-x-100': catStore.model.mirror }"
@@ -260,13 +226,6 @@ function handleMouseMove(event: MouseEvent) {
       >
 
       <canvas id="live2dCanvas" />
-
-      <img
-        v-for="path in modelStore.pressedKeys"
-        :key="path"
-        class="object-cover"
-        :src="convertFileSrc(path)"
-      >
 
       <div
         v-show="resizing || !modelStore.modelReady"

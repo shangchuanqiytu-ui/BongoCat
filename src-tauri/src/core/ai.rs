@@ -1,24 +1,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Once;
 
 /// 中转侧模型名（glm 前缀走智谱，实测 1s 出稿、人设质量最佳）
 const MODEL: &str = "glm-5.2";
 
 /// 单次回复上限（桌宠气泡场景，短回复足够）
 const MAX_TOKENS: u32 = 300;
-
-/// 安装 rustls 的 ring crypto provider。
-/// tauri-plugin-updater 以 `rustls-no-provider` 方式启用 reqwest 的 rustls 支持，
-/// 期望宿主应用自行安装 provider；不装则 reqwest Client 构建时 panic "No provider set"。
-/// 我们的对话请求走本地 http 用不到 TLS，但 provider 是全局必装项。
-fn ensure_crypto_provider() {
-    static INSTALL: Once = Once::new();
-
-    INSTALL.call_once(|| {
-        let _ = rustls::crypto::ring::default_provider().install_default();
-    });
-}
 
 /// 中转返回的 Anthropic Messages 响应（只取用到的字段）
 #[derive(Deserialize)]
@@ -51,8 +38,6 @@ struct ChatRequest {
 /// 中转自带上游鉴权，任意 x-api-key 即可通过。
 #[tauri::command]
 pub async fn ai_chat(api_url: String, system: String, messages: Vec<Value>) -> Result<String, String> {
-    ensure_crypto_provider();
-
     let base = api_url.trim_end_matches('/');
 
     let url = format!("{base}/v1/messages");

@@ -4,12 +4,9 @@ import { reactive, ref } from 'vue'
 export interface CatStore {
   model: {
     mirror: boolean
-    mouseMirror: boolean
     motionSound: boolean
     behavior: boolean
-    autoReleaseDelay: number
     maxFPS: number
-    ignoreMouse: boolean
   }
   window: {
     visible: boolean
@@ -30,9 +27,6 @@ export const useCatStore = defineStore('cat', () => {
   /** @deprecated 请使用 `model.mirror` */
   const mirrorMode = ref(false)
 
-  /** @deprecated 请使用 `model.mouseMirror` */
-  const mouseMirror = ref(false)
-
   /** @deprecated 请使用 `window.passThrough` */
   const penetrable = ref(false)
 
@@ -50,12 +44,9 @@ export const useCatStore = defineStore('cat', () => {
 
   const model = reactive<CatStore['model']>({
     mirror: false,
-    mouseMirror: false,
     motionSound: true,
     behavior: true,
-    autoReleaseDelay: 3,
     maxFPS: 60,
-    ignoreMouse: false,
   })
 
   const window = reactive<CatStore['window']>({
@@ -74,7 +65,6 @@ export const useCatStore = defineStore('cat', () => {
     if (migrated.value) return
 
     model.mirror = mirrorMode.value
-    model.mouseMirror = mouseMirror.value
 
     window.visible = true
     window.passThrough = penetrable.value

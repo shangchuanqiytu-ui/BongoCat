@@ -13,8 +13,6 @@
         "labels": {
           "modelSettings": "Cài đặt Mô hình",
           "mirrorMode": "Chế độ gương",
-          "mouseMirror": "Phản chiếu chuột",
-          "ignoreMouse": "Bỏ qua sự kiện chuột",
           "windowSettings": "Cài đặt Cửa sổ",
           "passThrough": "Click xuyên",
           "alwaysOnTop": "Luôn trên cùng",
@@ -24,21 +22,17 @@
           "opacity": "Độ mờ",
           "motionSound": "Âm thanh hành động",
           "behavior": "Hành động và Biểu cảm",
-          "autoReleaseDelay": "Độ trễ tự động nhả phím",
           "hideOnHover": "Ẩn khi di chuột",
           "maxFPS": "Tốc độ khung hình tối đa"
         },
         "hints": {
           "mirrorMode": "Bật để lật ngang mô hình.",
-          "mouseMirror": "Khi bật, chuột của mô hình sẽ phản chiếu theo chuyển động chuột thực tế.",
-          "ignoreMouse": "Khi bật, mô hình sẽ không phản hồi sự kiện chuột. Hữu ích cho chế độ bàn phím hoặc chế độ tay cầm.",
           "motionSound": "Khi bật, mô hình sẽ phát các âm thanh tương ứng khi thực hiện hành động (nếu tồn tại).",
           "behavior": "Khi bật, các hành động và biểu cảm có thể được cấu hình và kích hoạt.",
           "passThrough": "Bật để cửa sổ không ảnh hưởng đến thao tác trên ứng dụng khác.",
           "alwaysOnTop": "Bật để cửa sổ luôn nằm trên ứng dụng khác.",
           "keepInScreen": "Khi bật, cửa sổ sẽ tự động giữ trong ranh giới màn hình.",
           "windowSize": "Di chuyển chuột đến mép cửa sổ hoặc giữ Shift và kéo chuột phải để thay đổi kích thước.",
-          "autoReleaseDelay": "Do Windows không bắt được sự kiện nhả của một số phím hệ thống, các phím đó sẽ được tự động xem như đã nhả sau khi hết thời gian chờ.",
           "hideOnHover": "Khi bật, cửa sổ tự động ẩn khi chuột di vào. Có thể đặt thời gian trễ, 0 nghĩa là ẩn ngay.",
           "maxFPS": "Giới hạn tốc độ khung hình tối đa cho việc render mô hình. Giảm tốc độ khung hình có thể giảm mức sử dụng CPU/GPU."
         }
@@ -52,12 +46,7 @@
           "showTrayIcon": "Hiện biểu tượng trên khay hệ thống (tray)",
           "appearanceSettings": "Cài đặt giao diện",
           "themeMode": "Giao diện",
-          "language": "Ngôn ngữ",
-          "updateSettings": "Cài đặt cập nhật",
-          "autoCheckUpdate": "Tự động kiểm tra cập nhật",
-          "permissionsSettings": "Cài đặt quyền",
-          "inputMonitoringPermission": "Quyền giám sát đầu vào",
-          "administratorPermission": "Quyền quản trị viên"
+          "language": "Ngôn ngữ"
         },
         "options": {
           "auto": "Theo hệ thống",
@@ -66,23 +55,7 @@
         },
         "hints": {
           "showTaskbarIcon": "Bật để có thể quay cửa sổ qua OBS.",
-          "showTrayIcon": "Bật để hiện biểu tượng ứng dụng trên khay hệ thống.",
-          "inputMonitoringPermission": "Bật quyền giám sát để nhận sự kiện bàn phím và chuột từ hệ thống nhằm phản hồi thao tác của bạn.",
-          "inputMonitoringPermissionGuide": "Quyền Giám sát đầu vào là cần thiết để ứng dụng có thể nhận các sự kiện bàn phím và chuột từ hệ thống.\n\nCác bước thực hiện:\n1. Mở Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Giám sát đầu vào.\n2. Nếu BongoCat đã có trong danh sách, hãy chọn nó và nhấn nút \"-\" để xóa.\n3. Nhấn nút \"+\" để tìm và thêm BongoCat.\n4. Khởi động lại ứng dụng để quyền chính thức có hiệu lực.",
-          "administratorPermission": "Chạy ứng dụng với quyền quản trị viên giúp bắt một số phím và sự kiện nhập liệu cấp hệ thống ổn định hơn.",
-          "administratorPermissionGuide": "Để bắt một số phím và sự kiện nhập liệu cấp hệ thống ổn định hơn, bạn nên chạy ứng dụng với quyền quản trị viên.\n\nCách thực hiện:\n1. Thoát ứng dụng trước.\n2. Tìm file exe hoặc lối tắt của ứng dụng trong File Explorer.\n3. Chọn cách khởi động:\n   • Chỉ lần này: Nhấp chuột phải và chọn \"Run as administrator\".\n   • Luôn luôn (mặc định): Nhấp chuột phải → Properties → tab Compatibility → tích \"Run this program as an administrator\" → OK."
-        },
-        "status": {
-          "authorized": "Đã cấp quyền",
-          "adminEnabled": "Đã bật",
-          "authorize": "Đi đến Bật",
-          "viewGuide": "Xem hướng dẫn"
-        },
-        "buttons": {
-          "openNow": "Mở ngay",
-          "openLater": "Mở sau",
-          "setLater": "Cài đặt sau",
-          "exitApp": "Thoát ứng dụng"
+          "showTrayIcon": "Bật để hiện biểu tượng ứng dụng trên khay hệ thống."
         }
       },
       "model": {
@@ -142,7 +115,6 @@
           "copySuccess": "Đã sao chép"
         },
         "buttons": {
-          "checkUpdate": "Kiểm tra cập nhật",
           "copy": "Sao chép",
           "feedbackIssues": "Báo lỗi",
           "viewLog": "Xem nhật ký"
@@ -155,22 +127,6 @@
       "hints": {
         "pressRecordShortcut": "Nhấn phím/tổ hợp phím để ghi",
         "clickRecordShortcut": "Click để ghi phím tắt"
-      }
-    },
-    "updateApp": {
-      "title": "Đã tìm thấy phiên bản mới 🥳",
-      "labels": {
-        "updateVersion": "Phiên bản: ",
-        "updateTime": "Thời gian cập nhật: ",
-        "changelog": "Nhật ký thay đổi: "
-      },
-      "hints": {
-        "checkingUpdates": "Đang kiểm tra cập nhật...",
-        "alreadyLatest": "Bạn đang dùng phiên bản mới nhất 🎉"
-      },
-      "buttons": {
-        "updateNow": "Cập nhật ngay",
-        "updateLater": "Để sau"
       }
     }
   },
@@ -188,7 +144,6 @@
       }
     },
     "useTray": {
-      "checkUpdate": "Kiểm tra cập nhật",
       "openSource": "Mã nguồn"
     }
   },

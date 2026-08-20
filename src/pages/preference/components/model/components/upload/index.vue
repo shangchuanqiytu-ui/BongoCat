@@ -3,13 +3,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { appDataDir } from '@tauri-apps/api/path'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { open } from '@tauri-apps/plugin-dialog'
-import { readDir } from '@tauri-apps/plugin-fs'
 import { message } from 'antdv-next'
 import { nanoid } from 'nanoid'
 import { onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-
-import type { ModelMode } from '@/stores/model'
 
 import { INVOKE_KEY } from '@/constants'
 import { useModelStore } from '@/stores/model'
@@ -61,20 +58,6 @@ watch(selectPaths, async (paths) => {
     try {
       const id = nanoid()
 
-      let mode: ModelMode = 'standard'
-
-      const files = await readDir(join(fromPath, 'resources', 'right-keys')).catch(() => [])
-
-      if (files.length > 0) {
-        const fileNames = files.map(file => file.name.split('.')[0])
-
-        if (fileNames.includes('East')) {
-          mode = 'gamepad'
-        } else {
-          mode = 'keyboard'
-        }
-      }
-
       const toPath = join(await appDataDir(), 'custom-models', id)
 
       await invoke(INVOKE_KEY.COPY_DIR, {
@@ -85,7 +68,6 @@ watch(selectPaths, async (paths) => {
       modelStore.models.push({
         id,
         path: toPath,
-        mode,
         isPreset: false,
       })
 

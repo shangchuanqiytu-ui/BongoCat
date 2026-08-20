@@ -9,9 +9,8 @@ import { useAiStore } from '@/stores/ai'
 import { useGeneralStore } from '@/stores/general'
 import live2d from '@/utils/live2d'
 
-import { INVOKE_KEY, LISTEN_KEY } from '../constants'
+import { INVOKE_KEY } from '../constants'
 import { showWindow } from '../plugins/window'
-import { useTauriListen } from './useTauriListen'
 
 export type ChatStatus = 'idle' | 'thinking' | 'talking'
 
@@ -27,7 +26,7 @@ const MOUTH_PARAM_ID = 'ParamMouthOpenY'
 const MOUTH_MAX = 0.8
 const HISTORY_ROUNDS = 8
 const PROACTIVE_CHECK_INTERVAL = 60_000
-const PROACTIVE_IDLE_THRESHOLD = 5 * 60_000
+const PROACTIVE_IDLE_SECONDS = 5 * 60
 
 const PROACTIVE_PROMPTS = {
   zh: [
@@ -62,8 +61,6 @@ let hideTimer: ReturnType<typeof setTimeout> | undefined
 let mouthTimer: ReturnType<typeof setInterval> | undefined
 
 let proactiveCheckTimer: ReturnType<typeof setInterval> | undefined
-
-let lastActivityAt = Date.now()
 
 let nextProactiveAt = 0
 
@@ -156,6 +153,9 @@ export function useChat() {
   async function ask(question: string) {
     if (!aiStore.enabled) return
 
+    // 任何一次对话（含主动搭话本身）都重新随机下一轮
+    scheduleProactive()
+
     resetSpeech()
 
     status.value = 'thinking'
@@ -212,10 +212,6 @@ export function useChat() {
     inputVisible.value = true
   }
 
-  function markActivity() {
-    lastActivityAt = Date.now()
-  }
-
   function pickProactivePrompt() {
     const prompts = generalStore.appearance.language?.startsWith('zh') ? PROACTIVE_PROMPTS.zh : PROACTIVE_PROMPTS.en
 
@@ -230,16 +226,17 @@ export function useChat() {
     nextProactiveAt = Date.now() + minutes * 60_000
   }
 
-  function checkProactive() {
+  async function checkProactive() {
     if (!aiStore.enabled || !aiStore.proactive.enabled) return
 
     if (status.value !== 'idle' || inputVisible.value) return
 
     if (Date.now() < nextProactiveAt) return
 
-    if (Date.now() - lastActivityAt < PROACTIVE_IDLE_THRESHOLD) return
+    // 系统空闲查询（GetLastInputInfo，无全局钩子）；null（非 Windows）视为空闲，到点即说
+    const idleSeconds = await invoke<number | null>(INVOKE_KEY.GET_IDLE_SECONDS).catch(() => null)
 
-    scheduleProactive()
+    if (idleSeconds !== null && idleSeconds < PROACTIVE_IDLE_SECONDS) return
 
     void ask(pickProactivePrompt())
   }
@@ -250,11 +247,6 @@ export function useChat() {
     scheduleProactive()
 
     proactiveCheckTimer = setInterval(checkProactive, PROACTIVE_CHECK_INTERVAL)
-
-    // 任何全局键鼠输入都视为"博士在忙"，推迟主动搭话
-    useTauriListen(LISTEN_KEY.DEVICE_CHANGED, () => {
-      markActivity()
-    })
 
     useEventListener(window, 'blur', () => {
       inputVisible.value = false

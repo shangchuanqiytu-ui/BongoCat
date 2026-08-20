@@ -3,9 +3,8 @@ mod utils;
 
 use core::{
     ai::ai_chat,
-    device::start_device_listening,
-    gamepad::{start_gamepad_listing, stop_gamepad_listing},
     prevent_default, setup,
+    system::{get_cursor_pos, get_idle_seconds},
 };
 use tauri::{Manager, WindowEvent, generate_handler};
 use tauri_plugin_autostart::MacosLauncher;
@@ -31,17 +30,14 @@ pub fn run() {
         .invoke_handler(generate_handler![
             copy_dir,
             ai_chat,
-            start_device_listening,
-            start_gamepad_listing,
-            stop_gamepad_listing
+            get_idle_seconds,
+            get_cursor_pos
         ])
-        .plugin(tauri_plugin_admin_status::init())
         .plugin(tauri_plugin_custom_window::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_pinia::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(prevent_default::init())
         .plugin(tauri_plugin_single_instance::init(
             |app_handle, _argv, _cwd| {
@@ -51,14 +47,12 @@ pub fn run() {
         .plugin(
             tauri_plugin_log::Builder::new()
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                .filter(|metadata| !metadata.target().contains("gilrs"))
                 .build(),
         )
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
         ))
-        .plugin(tauri_plugin_macos_permissions::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())

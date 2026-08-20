@@ -8,12 +8,9 @@ import { reactive, ref } from 'vue'
 
 import { join } from '@/utils/path'
 
-export type ModelMode = 'standard' | 'keyboard' | 'gamepad'
-
 export interface Model {
   id: string
   path: string
-  mode: ModelMode
   isPreset: boolean
 }
 
@@ -21,8 +18,6 @@ export const useModelStore = defineStore('model', () => {
   const modelReady = ref(true)
   const models = ref<Model[]>([])
   const currentModel = ref<Model>()
-  const supportKeys = reactive<Record<string, string>>({})
-  const pressedKeys = reactive<Record<string, string>>({})
   const currentMotions = ref<Array<[string, MotionInfo[]]>>([])
   const currentExpressions = ref<ExpressionInfo[]>([])
   const shortcuts = reactive<Record<string, string>>({})
@@ -30,21 +25,14 @@ export const useModelStore = defineStore('model', () => {
   const init = async () => {
     const modelsPath = await resolveResource('assets/models')
 
+    // 只保留用户上传的模型，预置 standard 兔兔重新注入
     const nextModels = filter(models.value, { isPreset: false })
-    const presetModels = filter(models.value, { isPreset: true })
 
-    const modes: ModelMode[] = ['gamepad', 'keyboard', 'standard']
-
-    for (const mode of modes) {
-      const matched = find(presetModels, { mode })
-
-      nextModels.unshift({
-        id: matched?.id ?? nanoid(),
-        mode,
-        isPreset: true,
-        path: join(modelsPath, mode),
-      })
-    }
+    nextModels.unshift({
+      id: find(models.value, { isPreset: true })?.id ?? nanoid(),
+      isPreset: true,
+      path: join(modelsPath, 'standard'),
+    })
 
     const matched = find(nextModels, { id: currentModel.value?.id })
 
@@ -57,15 +45,9 @@ export const useModelStore = defineStore('model', () => {
     modelReady,
     models,
     currentModel,
-    supportKeys,
-    pressedKeys,
     currentMotions,
     currentExpressions,
     shortcuts,
     init,
   }
-}, {
-  tauri: {
-    filterKeys: ['supportKeys', 'pressedKeys'],
-  },
 })
