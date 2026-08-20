@@ -71,10 +71,20 @@ class Live2d {
 
     await this.model.ready
 
+    // 预热 idle：让首个 idle 动作进入 SDK 缓存，之后框架的待机循环同步命中缓存、
+    // 不再发起 fetch，规避加载初期的网络竞态
+    // （竞态曾导致 idle 循环每帧 reject，且期间所有动作/表情点击无响应）
+    await this.model.startMotion({ group: 'Idle', no: 0, priority: Priority.Idle }).catch(() => {
+      // 模型没有 Idle 分组时忽略（框架 idle 回归会自行跳过）
+    })
+
     const { width, height } = this.model
 
     const motions = groupBy(this.model.getMotions(), 'group')
     const expressions = this.model.getExpressions()
+
+    // 记录"空表情"（若模型注册了 reset 空表情），用于表情展示后自动清除
+    this.resetExpressionIndex = expressions.findIndex(item => item.name === 'reset')
 
     return {
       width,
@@ -107,23 +117,56 @@ class Live2d {
     this.model.anchor.set(0.5)
   }
 
+  /**
+   * 播放动作。
+   * - Force 优先级：动作播放中再次点击时立即切换（Normal 会因优先级判断被直接丢弃）
+   * - 动作播完后框架自动 startRandomMotion(Config.MotionGroupIdle) 回归待机，
+   *   前提是模型注册了 Idle 分组（兔兔已补 motion-idle）
+   */
   public startMotion(motion: MotionInfo) {
-    return this.model?.startMotion({
+    const context = this.model?.startMotion({
       ...motion,
-      priority: Priority.Normal,
+      priority: Priority.Force,
     })
+
+    // 防加载竞态期的 reject 变成 unhandled rejection（渲染期间会逐帧刷错误日志）
+    context?.catch(() => { })
+
+    return context
   }
 
+  /** 空表情（reset）在表情列表中的 index；-1 表示模型未提供，表情将保持展示 */
+  private resetExpressionIndex = -1
+
+  /** 表情展示时长（秒），到时切回空表情清除 */
+  private EXPRESSION_DURATION = 3
+
+  private expressionResetTimer: ReturnType<typeof setTimeout> | undefined
+
+  /**
+   * 设置表情。
+   * 表情是持续状态（参数保持直到被替换），展示一会儿后自动切回空表情回归默认脸。
+   */
   public setExpression(index: number) {
-    return this.model?.setExpression({ index })
+    this.clearExpressionTimer()
+
+    const context = this.model?.setExpression({ index })
+
+    if (this.resetExpressionIndex >= 0 && index !== this.resetExpressionIndex) {
+      this.expressionResetTimer = setTimeout(() => {
+        this.model?.setExpression({ index: this.resetExpressionIndex })
+      }, this.EXPRESSION_DURATION * 1000)
+    }
+
+    return context
   }
 
-  public getParameterValueRange(id: string) {
-    return this.model?.getParameterValueRangeById(id)
-  }
+  private clearExpressionTimer() {
+    if (this.expressionResetTimer) {
+      clearTimeout(this.expressionResetTimer)
 
-  public setParameterValue(id: string, value: number | boolean) {
-    return this.model?.setParameterValueById(id, Number(value))
+      this.expressionResetTimer = void 0
+    }
   }
 
   public setMotionSoundEnabled(enabled: boolean) {

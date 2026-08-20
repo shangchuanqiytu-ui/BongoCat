@@ -30,7 +30,7 @@ import { clearObject } from '@/utils/shared'
 
 const { startListening } = useDevice()
 const appWindow = getCurrentWebviewWindow()
-const { modelSize, handleLoad, handleDestroy, handleResize, handleKeyChange } = useModel()
+const { modelSize, handleLoad, handleDestroy, handleResize, handleAutoFit, handleKeyChange } = useModel()
 const catStore = useCatStore()
 const { getBaseMenu, getExitMenu } = useAppMenu()
 const modelStore = useModelStore()
@@ -59,6 +59,9 @@ watch(() => modelStore.currentModel, async (model) => {
   if (!model) return
 
   await handleLoad()
+
+  // 超大模型（如全尺寸 Live2D 角色）自动缩小到屏幕高度 45%
+  await handleAutoFit()
 
   const path = join(model.path, 'resources', 'background.png')
 

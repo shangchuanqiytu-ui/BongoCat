@@ -1,0 +1,137 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "兔兔-阿米娅.moc3",
+    "Textures": [
+      "兔兔-阿米娅.8192/texture_00.png"
+    ],
+    "Physics": "兔兔-阿米娅.physics3.json",
+    "DisplayInfo": "兔兔-阿米娅.cdi3.json",
+    "Expressions": [
+      {
+        "Name": "脱外套",
+        "File": "cloth off.exp3.json"
+      },
+      {
+        "Name": "生气",
+        "File": "emote-angry.exp3.json"
+      },
+      {
+        "Name": "难过",
+        "File": "emote-sad.exp3.json"
+      },
+      {
+        "Name": "害羞",
+        "File": "emote-shy.exp3.json"
+      },
+      {
+        "Name": "害羞2",
+        "File": "emote-shy2.exp3.json"
+      },
+      {
+        "Name": "害羞3",
+        "File": "emote-shy3.exp3.json"
+      },
+      {
+        "Name": "委屈",
+        "File": "face-sad.exp3.json"
+      },
+      {
+        "Name": "惊吓",
+        "File": "face-shock.exp3.json"
+      },
+      {
+        "Name": "吃饭",
+        "File": "hand-rice.exp3.json"
+      },
+      {
+        "Name": "喇叭",
+        "File": "hand-trumpt.exp3.json"
+      },
+      {
+        "Name": "愤怒",
+        "File": "mark-bang.exp3.json"
+      },
+      {
+        "Name": "兴奋",
+        "File": "mark-exceting.exp3.json"
+      },
+      {
+        "Name": "花朵",
+        "File": "mark-flower.exp3.json"
+      },
+      {
+        "Name": "音乐",
+        "File": "mark-music.exp3.json"
+      },
+      {
+        "Name": "汗滴",
+        "File": "mark-sweat.exp3.json"
+      },
+      {
+        "Name": "饿了",
+        "File": "mouth-hungry.exp3.json"
+      },
+      {
+        "Name": "端锅",
+        "File": "hand-pot.exp3.json"
+      },
+      {
+        "Name": "惊叹",
+        "File": "mark-shock.exp3.json"
+      },
+      {
+        "Name": "复位",
+        "File": "reset.exp3.json"
+      }
+    ],
+    "Motions": {
+      "celebrate": [
+        {
+          "File": "motion-celebrate.motion3.json"
+        }
+      ],
+      "clothoff": [
+        {
+          "File": "motion-cloth off.motion3.json"
+        }
+      ],
+      "keyboard": [
+        {
+          "File": "motion-keyboard.motion3.json"
+        }
+      ],
+      "music": [
+        {
+          "File": "motion-music.motion3.json"
+        }
+      ],
+      "weapon": [
+        {
+          "File": "motion-weapon.motion3.json"
+        }
+      ],
+      "Idle": [
+        {
+          "File": "motion-idle.motion3.json"
+        }
+      ]
+    }
+  },
+  "Groups": [
+    {
+      "Target": "Parameter",
+      "Name": "EyeBlink",
+      "Ids": [
+        "ParamEyeLOpen",
+        "ParamEyeROpen"
+      ]
+    },
+    {
+      "Target": "Parameter",
+      "Name": "LipSync",
+      "Ids": []
+    }
+  ],
+  "HitAreas": []
+}

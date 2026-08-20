@@ -20,5 +20,6 @@ export default antfu({
       },
     ],
   },
-  ignores: ['**/*.toml'],
+  // src-tauri/assets 是 Live2D 模型数据（cdi3/model3 等含全角空格的中文配置），不是源码
+  ignores: ['**/*.toml', 'src-tauri/assets/**'],
 })

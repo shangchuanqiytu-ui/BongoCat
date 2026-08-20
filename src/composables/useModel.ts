@@ -97,9 +97,19 @@ export function useModel() {
         behaviorIds.push(getExpressionShortcutId(modelId, index))
       }
 
-      for (const [index, id] of behaviorIds.entries()) {
-        if (modelStore.shortcuts[id]) continue
+      // 清理当前模型下已不存在的行为快捷键（换模型后遗留的旧组，如 CAT_motion），
+      // 避免旧键位和新行为撞车（曾出现 Ctrl+5 同时绑给 weapon 和表情1，快捷键随机失灵）
+      const validIds = new Set(behaviorIds)
+      const idPrefix = `${modelId}:`
 
+      for (const id of Object.keys(modelStore.shortcuts)) {
+        if (id.startsWith(idPrefix) && !validIds.has(id)) {
+          delete modelStore.shortcuts[id]
+        }
+      }
+
+      // 全量重排键位（不保留旧值）：旧值来自行为数不同的历史版本，继续沿用会互相冲突
+      for (const [index, id] of behaviorIds.entries()) {
         const shortcut = getBehaviorShortcut(index)
 
         if (!shortcut) continue
@@ -134,6 +144,33 @@ export function useModel() {
     const size = await appWindow.size()
 
     catStore.window.scale = round((size.width / width) * 100)
+  }
+
+  /**
+   * 加载超大模型（如全尺寸 2332×2192 的 Live2D 角色）时，
+   * 自动缩小到屏幕高度的 45% 再居中，避免占满整个屏幕。
+   */
+  async function handleAutoFit() {
+    if (!modelSize.value) return
+
+    const { height } = modelSize.value
+
+    // 用 Tauri 的屏幕 API 拿真实工作区高度（比 window.screen 更可靠）
+    let screenHeight: number
+
+    try {
+      const monitor = await getCursorMonitor()
+
+      screenHeight = monitor?.size.height ?? window.screen.availHeight
+    } catch {
+      screenHeight = window.screen.availHeight
+    }
+
+    if (height <= screenHeight * 0.9) return
+
+    const scale = Math.max(10, Math.round((screenHeight * 0.36 / height) * 100))
+
+    catStore.window.scale = scale
   }
 
   const handlePress = (key: string) => {
@@ -238,6 +275,7 @@ export function useModel() {
     handleLoad,
     handleDestroy,
     handleResize,
+    handleAutoFit,
     handleKeyChange,
     handleMouseChange,
     handleMouseMove,

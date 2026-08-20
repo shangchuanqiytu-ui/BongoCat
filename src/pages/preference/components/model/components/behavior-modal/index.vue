@@ -4,7 +4,7 @@ import type { MotionInfo } from 'easy-live2d'
 import { emit } from '@tauri-apps/api/event'
 import { Empty, Modal, Segmented } from 'antdv-next'
 import { isEmpty } from 'es-toolkit/compat'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { LISTEN_KEY } from '@/constants'
 import { useModelStore } from '@/stores/model'
@@ -14,6 +14,22 @@ import BehaviorItem from './components/behavior-item/index.vue'
 const modelValue = defineModel<boolean>()
 const modelStore = useModelStore()
 const value = ref<'motion' | 'expression'>('motion')
+
+// currentMotions 是 [组名, 动作列表] 的二元组数组（上游约定），只能过滤、不能再
+// Object.entries 一层（那会得到 "0"/"1"… 数字键，点击时发出垃圾 payload 导致动作全部无效）
+// Idle 组是框架待机回归机制（复位到默认姿势），待机状态下点击无视觉变化，不对外展示
+const visibleMotionGroups = computed(() => {
+  return (modelStore.currentMotions || []).filter(([groupName]) => groupName !== 'Idle')
+})
+
+// 动作组中文名（模型 model3.json 里的组名是英文 id，直接展示不直观）
+const MOTION_GROUP_LABELS: Record<string, string> = {
+  celebrate: '庆祝',
+  clothoff: '脱外套',
+  keyboard: '键盘',
+  music: '音乐',
+  weapon: '武器',
+}
 
 function getMotionShortcutId(groupName: string, index: number) {
   return `${modelStore.currentModel?.id}:motion:${groupName}:${index}`
@@ -62,11 +78,11 @@ function setExpression(index: number) {
 
       <template v-else>
         <div
-          v-for="([groupName, motions], groupIndex) in modelStore.currentMotions"
+          v-for="([groupName, motions], groupIndex) in visibleMotionGroups"
           :key="groupName"
         >
           <div class="mb-2">
-            {{ $t('pages.preference.model.behaviorModal.labels.motionGroupIndex', { index: groupIndex + 1 }) }}
+            {{ MOTION_GROUP_LABELS[groupName] || groupName || $t('pages.preference.model.behaviorModal.labels.motionGroupIndex', { index: groupIndex + 1 }) }}
           </div>
 
           <div class="b-1 b-solid b-border rounded-lg">
@@ -76,7 +92,7 @@ function setExpression(index: number) {
             >
               <BehaviorItem
                 v-model="modelStore.shortcuts[getMotionShortcutId(groupName, index)]"
-                :label="$t('pages.preference.model.behaviorModal.labels.motionIndex', { index: index + 1 })"
+                :label="motions.length === 1 ? (MOTION_GROUP_LABELS[groupName] || groupName) : item.name"
                 @click="startMotion(item)"
               />
             </template>
@@ -101,7 +117,7 @@ function setExpression(index: number) {
         >
           <BehaviorItem
             v-model="modelStore.shortcuts[getExpressionShortcutId(index)]"
-            :label="$t('pages.preference.model.behaviorModal.labels.expressionIndex', { index: index + 1 })"
+            :label="item.name"
             @click="setExpression(index)"
           />
         </template>

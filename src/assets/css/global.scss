@@ -4,6 +4,8 @@ html {
   color-scheme: light;
 
   body {
+    margin: 0;
+    overflow: hidden;
     --uno: text-3.5 transition-opacity-300;
   }
 
