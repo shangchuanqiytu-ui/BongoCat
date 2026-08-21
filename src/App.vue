@@ -46,8 +46,9 @@ onMounted(async () => {
   await generalStore.init()
   await shortcutStore.$tauri.start()
   await aiStore.$tauri.start()
-  // key 从凭据管理器加载（含 pinia 旧明文一次性迁移）；必须在 $tauri.start 之后（restore 已完成）
-  await loadApiKey()
+  // key 从凭据管理器加载（含 pinia 旧明文一次性迁移）。不 await：
+  // 迁移结果不参与首帧渲染，避免新用户首启被拖慢
+  void loadApiKey()
   await restoreState()
 })
 

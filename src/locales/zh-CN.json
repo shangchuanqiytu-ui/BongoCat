@@ -50,6 +50,7 @@
           "proactive": "启用后，兔兔会在你长时间空闲时主动找你聊天。",
           "apiUrl": "对话接口地址（Anthropic Messages 协议，可填本地中转或官方直连端点）。",
           "apiKey": "直连官方端点时必填；走本地中转可留空。",
+          "apiKeySaveFailed": "API Key 保存失败（凭据管理器不可写），请重试。",
           "model": "模型名，直连时须与端点匹配（智谱如 glm-5.2）。",
           "systemPersona": "定义兔兔的性格与说话风格。",
           "memoryEnabled": "兔兔会记住聊过的事，空闲时自动整理成长期记忆。",

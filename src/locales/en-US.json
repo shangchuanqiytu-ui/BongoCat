@@ -50,6 +50,7 @@
           "proactive": "When enabled, the bunny will start a chat while you are idle.",
           "apiUrl": "Chat API endpoint (Anthropic Messages protocol — local relay or official direct).",
           "apiKey": "Required for official endpoints; leave empty for local relay.",
+          "apiKeySaveFailed": "Failed to save the API key (credential store not writable). Please retry.",
           "model": "Model name, must match the endpoint when connecting directly (e.g. glm-5.2 for Zhipu).",
           "systemPersona": "Defines the bunny's personality and speaking style.",
           "memoryEnabled": "The bunny remembers your chats and consolidates them into long-term memory while idle.",

@@ -97,6 +97,12 @@ async function onDream() {
     dreaming.value = false
   }
 }
+
+async function onSaveApiKey() {
+  if (!await saveApiKey(apiKey.value)) {
+    message.error(t('pages.preference.ai.hints.apiKeySaveFailed'))
+  }
+}
 </script>
 
 <template>
@@ -170,7 +176,7 @@ async function onDream() {
         v-model:value="apiKey"
         class="w-60"
         type="password"
-        @blur="saveApiKey(apiKey)"
+        @blur="onSaveApiKey"
       />
     </ProListItem>
 

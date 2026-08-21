@@ -25,6 +25,13 @@ mod impl_ {
 
         let cred = unsafe { &*cred_ptr };
 
+        // 第三方写入的 0 长度凭据：from_raw_parts(null/0) 属 UB，先释放再放弃
+        if cred.CredentialBlob.is_null() || cred.CredentialBlobSize == 0 {
+            unsafe { CredFree(cred_ptr.cast()) };
+
+            return None;
+        }
+
         let blob = unsafe {
             std::slice::from_raw_parts(cred.CredentialBlob, cred.CredentialBlobSize as usize)
         };

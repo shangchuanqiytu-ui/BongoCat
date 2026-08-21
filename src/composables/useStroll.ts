@@ -109,8 +109,9 @@ async function stroll() {
 
     const { position: monPos, size: monSize } = monitor
 
-    const size = await appWindow.outerSize()
-    const position = await appWindow.outerPosition()
+    const size = await appWindow.outerSize().catch(() => null)
+    const position = await appWindow.outerPosition().catch(() => null)
+    if (!size || !position) return
 
     const room = Math.max(0, monSize.width - size.width)
     let x = Math.min(Math.max(position.x - monPos.x, 0), room)
@@ -165,7 +166,8 @@ async function stroll() {
       void step().catch(() => resolve())
     })
   } finally {
-    if (walkTimer) {
+    // 只清自己代数的 timer：旧链 finally 若把新链已 arm 的 timer 清掉，新链会永挂卡死
+    if (generation === strollGeneration && walkTimer) {
       clearTimeout(walkTimer)
 
       walkTimer = void 0
