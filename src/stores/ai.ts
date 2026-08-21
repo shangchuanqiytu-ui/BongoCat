@@ -49,8 +49,8 @@ export const useAiStore = defineStore('ai', () => {
 
   const proactive = reactive<AiStore['proactive']>({
     enabled: true,
-    minInterval: 25,
-    maxInterval: 40,
+    minInterval: 5,
+    maxInterval: 12,
   })
 
   return {
