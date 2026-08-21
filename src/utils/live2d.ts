@@ -83,8 +83,9 @@ class Live2d {
     const motions = groupBy(this.model.getMotions(), 'group')
     const expressions = this.model.getExpressions()
 
-    // 记录"空表情"（若模型注册了 reset 空表情），用于表情展示后自动清除
-    this.resetExpressionIndex = expressions.findIndex(item => item.name === 'reset')
+    // 记录"空表情"（模型注册的复位表情），用于表情展示后自动清除。
+    // 注册名是中文"复位"（早前英文 'reset' 的匹配在改名后失效过，自动复位静默失灵、表情僵住）
+    this.resetExpressionIndex = expressions.findIndex(item => item.name === '复位' || item.name === 'reset')
 
     return {
       width,
