@@ -203,6 +203,8 @@ export function useChat() {
 
         let reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
           apiUrl: aiStore.apiUrl,
+          apiKey: aiStore.apiKey,
+          model: aiStore.model,
           system: buildSystemPrompt(aiStore.systemPersona) + (aiStore.emotionEnabled ? buildEmotionInstruction() : ''),
           messages,
         })

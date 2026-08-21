@@ -8,6 +8,10 @@ export interface AiStore {
   shortcut: string
   /** API 中转地址（Anthropic Messages 协议） */
   apiUrl: string
+  /** 直连官方端点时的 API Key（留空走本地中转） */
+  apiKey: string
+  /** 模型名（直连官方端点时须与该家匹配，如智谱 glm-5.2） */
+  model: string
   /** 人设 system prompt */
   systemPersona: string
   /** 跨会话记忆（diary/digest/memory 做梦链路总开关） */
@@ -33,6 +37,10 @@ export const useAiStore = defineStore('ai', () => {
 
   const apiUrl = ref('http://127.0.0.1:18081')
 
+  const apiKey = ref('')
+
+  const model = ref('glm-5.2')
+
   const systemPersona = ref(DEFAULT_SYSTEM_PERSONA)
 
   const memoryEnabled = ref(true)
@@ -49,6 +57,8 @@ export const useAiStore = defineStore('ai', () => {
     enabled,
     shortcut,
     apiUrl,
+    apiKey,
+    model,
     systemPersona,
     memoryEnabled,
     emotionEnabled,

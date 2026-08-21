@@ -48,6 +48,8 @@ pub fn run() {
         ))
         .plugin(
             tauri_plugin_log::Builder::new()
+                // 默认 Trace 会把 reqwest/hyper 的连接与重试内部日志全刷出来，压到 Info
+                .level(log::LevelFilter::Info)
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
                 .build(),
         )

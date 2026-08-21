@@ -162,6 +162,27 @@ async function onDream() {
     </ProListItem>
 
     <ProListItem
+      :description="$t('pages.preference.ai.hints.apiKey')"
+      :title="$t('pages.preference.ai.labels.apiKey')"
+    >
+      <Input
+        v-model:value="aiStore.apiKey"
+        class="w-60"
+        type="password"
+      />
+    </ProListItem>
+
+    <ProListItem
+      :description="$t('pages.preference.ai.hints.model')"
+      :title="$t('pages.preference.ai.labels.model')"
+    >
+      <Input
+        v-model:value="aiStore.model"
+        class="w-60"
+      />
+    </ProListItem>
+
+    <ProListItem
       :description="$t('pages.preference.ai.hints.systemPersona')"
       :title="$t('pages.preference.ai.labels.systemPersona')"
       vertical
