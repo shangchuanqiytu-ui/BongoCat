@@ -14,6 +14,8 @@ export const INVOKE_KEY = {
   AI_CHAT: 'ai_chat',
   GET_IDLE_SECONDS: 'get_idle_seconds',
   GET_CURSOR_POS: 'get_cursor_pos',
+  CHAT_ROUND_BEGIN: 'chat_round_begin',
+  CHAT_ROUND_END: 'chat_round_end',
 }
 
 export const LANGUAGE = {

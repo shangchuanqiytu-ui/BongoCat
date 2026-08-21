@@ -1,5 +1,25 @@
-//! 系统级查询（替代已删除的全局键鼠钩子）：空闲时长、光标位置。
+//! 系统级查询（替代已删除的全局键鼠钩子）：空闲时长、光标位置、对话轮次互斥。
 //! 查询式 API，不装钩子、不需要管理员权限。
+
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// 全进程"对话轮次进行中"标志：所有窗口（宠物/聊天记录）共享一个进程，
+/// 以 CAS 实现跨窗口互斥——同一时刻只允许一轮对话在飞（读快照→LLM→落盘），
+/// 消除多窗口并发读写的竞态。进程退出标志即消失，无死锁残留，
+/// 因此不需要 OpenClaw 那种文件锁的过期偷锁逻辑。
+static CHAT_ROUND_ACTIVE: AtomicBool = AtomicBool::new(false);
+
+/// 尝试抢占对话轮次：返回 true=抢到（此前空闲），false=别窗正在对话中。
+#[tauri::command]
+pub fn chat_round_begin() -> bool {
+    !CHAT_ROUND_ACTIVE.swap(true, Ordering::SeqCst)
+}
+
+/// 归还对话轮次。
+#[tauri::command]
+pub fn chat_round_end() {
+    CHAT_ROUND_ACTIVE.store(false, Ordering::SeqCst);
+}
 
 /// 距上次系统输入（键鼠任意操作）的秒数，供主动搭话的空闲判定。
 #[tauri::command]

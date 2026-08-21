@@ -13,7 +13,7 @@ import live2d from '@/utils/live2d'
 
 import { INVOKE_KEY, LISTEN_KEY, WINDOW_LABEL } from '../constants'
 import { showWindow } from '../plugins/window'
-import { buildSystemPrompt, dreamCheck, loadPersistedRounds, recordRound, refreshDigest, syncMemoryFromDisk } from './useChatMemory'
+import { buildSystemPrompt, dreamCheck, loadPersistedRounds, recordRound, refreshDigest, syncMemoryFromDisk, withChatRoundLock } from './useChatMemory'
 import { useTauriListen } from './useTauriListen'
 
 const appWindow = getCurrentWebviewWindow()
@@ -170,6 +170,7 @@ export function useChat() {
   /**
    * 发起一轮对话。hold=true（主动搭话）说完保持挂起等博士回复/跳过；
    * 返回回复文本（聊天记录窗可直接消费），失败返回 undefined。
+   * 全程持跨窗口对话锁：并发 ask（宠物窗+聊天窗）串行执行，快照不再互缺。
    */
   async function ask(question: string, options?: { hold?: boolean }) {
     if (!aiStore.enabled) return
@@ -181,52 +182,54 @@ export function useChat() {
 
     status.value = 'thinking'
 
-    try {
-      // 先从盘上同步：聊天窗/宠物窗共用磁盘态，历史与记忆都以盘为准
-      const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2), syncMemoryFromDisk()])
+    return await withChatRoundLock(async () => {
+      try {
+        // 先从盘上同步：聊天窗/宠物窗共用磁盘态，历史与记忆都以盘为准
+        const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2), syncMemoryFromDisk()])
 
-      const messages = [...persisted, { role: 'user' as const, content: question }]
+        const messages = [...persisted, { role: 'user' as const, content: question }]
 
-      const reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
-        apiUrl: aiStore.apiUrl,
-        system: buildSystemPrompt(aiStore.systemPersona),
-        messages,
-      })
+        const reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
+          apiUrl: aiStore.apiUrl,
+          system: buildSystemPrompt(aiStore.systemPersona),
+          messages,
+        })
 
-      const nextHistory = [...messages, { role: 'assistant' as const, content: reply }]
+        const nextHistory = [...messages, { role: 'assistant' as const, content: reply }]
 
-      // 窗口溢出的轮次先落盘（diary），再 re-distill 进滚动摘要（内部自带质量守卫）
-      const dropped = nextHistory.slice(0, Math.max(0, nextHistory.length - HISTORY_ROUNDS * 2))
+        // 窗口溢出的轮次先落盘（diary），再 re-distill 进滚动摘要（内部自带质量守卫）
+        const dropped = nextHistory.slice(0, Math.max(0, nextHistory.length - HISTORY_ROUNDS * 2))
 
-      history.value = nextHistory.slice(-HISTORY_ROUNDS * 2)
+        history.value = nextHistory.slice(-HISTORY_ROUNDS * 2)
 
-      await recordRound(question, reply)
+        await recordRound(question, reply)
 
-      // 广播给其他窗口（主窗借此解除挂起的主动搭话气泡）
-      void emit(LISTEN_KEY.CHAT_ACTIVITY, appWindow.label)
+        // 广播给其他窗口（主窗借此解除挂起的主动搭话气泡）
+        void emit(LISTEN_KEY.CHAT_ACTIVITY, appWindow.label)
 
-      void refreshDigest(dropped)
+        void refreshDigest(dropped)
 
-      status.value = 'talking'
+        status.value = 'talking'
 
-      isError.value = false
+        isError.value = false
 
-      startTyping(reply, options?.hold === true)
+        startTyping(reply, options?.hold === true)
 
-      startMouth()
+        startMouth()
 
-      return reply
-    } catch (err) {
-      logError(isString(err) ? err : JSON.stringify(err))
+        return reply
+      } catch (err) {
+        logError(isString(err) ? err : JSON.stringify(err))
 
-      status.value = 'talking'
+        status.value = 'talking'
 
-      isError.value = true
+        isError.value = true
 
-      displayText.value = i18n.global.t('pages.main.chat.error')
+        displayText.value = i18n.global.t('pages.main.chat.error')
 
-      scheduleHide()
-    }
+        scheduleHide()
+      }
+    })
   }
 
   async function submit(question: string) {

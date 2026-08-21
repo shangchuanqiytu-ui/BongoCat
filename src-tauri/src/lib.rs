@@ -4,7 +4,7 @@ mod utils;
 use core::{
     ai::ai_chat,
     prevent_default, setup,
-    system::{get_cursor_pos, get_idle_seconds},
+    system::{chat_round_begin, chat_round_end, get_cursor_pos, get_idle_seconds},
 };
 use tauri::{Manager, WindowEvent, generate_handler};
 use tauri_plugin_autostart::MacosLauncher;
@@ -31,7 +31,9 @@ pub fn run() {
             copy_dir,
             ai_chat,
             get_idle_seconds,
-            get_cursor_pos
+            get_cursor_pos,
+            chat_round_begin,
+            chat_round_end
         ])
         .plugin(tauri_plugin_custom_window::init())
         .plugin(tauri_plugin_os::init())

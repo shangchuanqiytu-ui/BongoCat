@@ -28,6 +28,14 @@ const DIR = 'ai-chat'
 
 const HISTORY_FILE = `${DIR}/history.jsonl`
 
+/** history.jsonl 轮转归档（物理瘦身；每轮对话在 diary/日期.md 里另有永久归档） */
+const ARCHIVE_FILE = `${DIR}/history-archive.jsonl`
+
+/** 超过 MAX 行时把前段挪进归档、只留最近 KEEP 行（ask 每轮都会读，轮转随读自然发生） */
+const HISTORY_MAX_LINES = 4000
+
+const HISTORY_KEEP_LINES = 2000
+
 const DIGEST_FILE = `${DIR}/digest.md`
 
 const MEMORY_FILE = `${DIR}/memory.md`
@@ -260,11 +268,57 @@ export async function syncMemoryFromDisk() {
   await readStateFromDisk()
 }
 
+/**
+ * 跨窗口对话轮次互斥（Rust 侧 AtomicBool CAS，全进程共享）：
+ * 同一时刻只允许一轮 ask（读快照→LLM→落盘）在飞，后到窗口自旋等待，
+ * 消除多窗口并发的读快照竞态——等价 OpenClaw 的会话所有权/文件锁语义，
+ * 但我们所有窗口同进程，进程退出锁即消失，无需它的过期偷锁逻辑。
+ * 等待超时（对端异常挂死）则降级为无锁执行：宁可冒竞态也不丢用户消息。
+ */
+export async function withChatRoundLock<T>(task: () => Promise<T>, timeoutMs = 75_000): Promise<T> {
+  const deadline = Date.now() + timeoutMs
+
+  let locked = false
+
+  while (Date.now() < deadline) {
+    if (await invoke<boolean>(INVOKE_KEY.CHAT_ROUND_BEGIN).catch(() => true)) {
+      locked = true
+
+      break
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 150))
+  }
+
+  try {
+    return await task()
+  } finally {
+    if (locked) void invoke(INVOKE_KEY.CHAT_ROUND_END).catch(() => {})
+  }
+}
+
 /** 启动时恢复最近 N 轮对话（Layer 0：重启不清零） */
 export async function loadPersistedRounds(maxMessages: number) {
   await initChatMemory()
 
-  const lines = (await readTextIfExists(HISTORY_FILE)).split('\n').filter(Boolean).slice(-HISTORY_LOAD_LINES)
+  const allLines = (await readTextIfExists(HISTORY_FILE)).split('\n').filter(Boolean)
+
+  // 轮转：超限把前段挪进归档文件（diary 是每轮的永久归档，这里只是工作文件瘦身）
+  if (allLines.length > HISTORY_MAX_LINES) {
+    const kept = allLines.slice(-HISTORY_KEEP_LINES)
+
+    const archived = allLines.slice(0, allLines.length - HISTORY_KEEP_LINES)
+
+    try {
+      await appendText(ARCHIVE_FILE, `${archived.join('\n')}\n`)
+
+      await writeTextFile(HISTORY_FILE, `${kept.join('\n')}\n`, FS_OPTS)
+    } catch {
+      // 轮转失败不影响本次读取
+    }
+  }
+
+  const lines = allLines.slice(-HISTORY_LOAD_LINES)
 
   const messages: ChatMessage[] = []
 
