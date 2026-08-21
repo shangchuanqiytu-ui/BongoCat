@@ -16,6 +16,8 @@ export const INVOKE_KEY = {
   GET_CURSOR_POS: 'get_cursor_pos',
   CHAT_ROUND_BEGIN: 'chat_round_begin',
   CHAT_ROUND_END: 'chat_round_end',
+  GET_API_KEY: 'get_api_key',
+  SET_API_KEY: 'set_api_key',
 }
 
 export const LANGUAGE = {

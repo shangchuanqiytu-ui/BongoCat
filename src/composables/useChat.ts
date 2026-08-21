@@ -264,9 +264,12 @@ export function useChat() {
 
         const messages = [...anchored, { role: 'user' as const, content: question }]
 
+        // key 每轮直读凭据管理器：偏好窗改 key 后本窗（模块实例各窗一份）立即拿到新值
+        const apiKey = await invoke<string | null>(INVOKE_KEY.GET_API_KEY).catch(() => null) ?? ''
+
         let reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
           apiUrl: aiStore.apiUrl,
-          apiKey: aiStore.apiKey,
+          apiKey,
           model: aiStore.model,
           system: buildSystemPrompt(aiStore.systemPersona) + (aiStore.emotionEnabled ? buildEmotionInstruction() : ''),
           messages,
@@ -385,7 +388,7 @@ export function useChat() {
   /** 按组名播动作（模型存在性由 currentMotions 校验；播只对主窗生效） */
   function playMotion(group: string) {
     const exists = modelStore.currentMotions?.some(([groupName]) => groupName === group)
-    if (exists) live2d.startMotion({ group, no: 0, name: `${group}_0` })
+    if (exists) live2d.startMotion({ group, no: 0 })
   }
 
   function buildProactiveInstruction(kind: 'present' | 'returned') {

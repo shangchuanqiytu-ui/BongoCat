@@ -11,6 +11,7 @@ import { onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterView } from 'vue-router'
 
+import { loadApiKey } from './composables/useAiSecret'
 import { useTauriListen } from './composables/useTauriListen'
 import { useWindowState } from './composables/useWindowState'
 import { LANGUAGE, LISTEN_KEY } from './constants'
@@ -45,6 +46,8 @@ onMounted(async () => {
   await generalStore.init()
   await shortcutStore.$tauri.start()
   await aiStore.$tauri.start()
+  // key 从凭据管理器加载（含 pinia 旧明文一次性迁移）；必须在 $tauri.start 之后（restore 已完成）
+  await loadApiKey()
   await restoreState()
 })
 

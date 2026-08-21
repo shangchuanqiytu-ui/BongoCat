@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 
 import ProListItem from '@/components/pro-list-item/index.vue'
 import ProList from '@/components/pro-list/index.vue'
+import { apiKey, saveApiKey } from '@/composables/useAiSecret'
 import { clearMemory, getDigestContent, getDreamsContent, getMemoryContent, runDream, setMemoryContent, syncMemoryFromDisk } from '@/composables/useChatMemory'
 import { useAiStore } from '@/stores/ai'
 
@@ -166,9 +167,10 @@ async function onDream() {
       :title="$t('pages.preference.ai.labels.apiKey')"
     >
       <Input
-        v-model:value="aiStore.apiKey"
+        v-model:value="apiKey"
         class="w-60"
         type="password"
+        @blur="saveApiKey(apiKey)"
       />
     </ProListItem>
 

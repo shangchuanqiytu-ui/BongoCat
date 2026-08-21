@@ -126,7 +126,7 @@ export function useIdleBehavior() {
         return
       }
 
-      live2d.startMotion({ group: action.group, no: 0, name: `${action.group}_0` })
+      live2d.startMotion({ group: action.group, no: 0 })
 
       scheduleNext()
     }

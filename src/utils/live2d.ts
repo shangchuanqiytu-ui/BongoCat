@@ -118,12 +118,12 @@ class Live2d {
   }
 
   /**
-   * 播放动作。
+   * 播放动作（name 由 group/no 拼出，上游只认 group/no，调用方无需传）。
    * - Force 优先级：动作播放中再次点击时立即切换（Normal 会因优先级判断被直接丢弃）
    * - 动作播完后框架自动 startRandomMotion(Config.MotionGroupIdle) 回归待机，
    *   前提是模型注册了 Idle 分组（兔兔已补 motion-idle）
    */
-  public startMotion(motion: MotionInfo) {
+  public startMotion(motion: Omit<MotionInfo, 'name'>) {
     const context = this.model?.startMotion({
       ...motion,
       priority: Priority.Force,

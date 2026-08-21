@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { useEventListener } from '@vueuse/core'
-import { onUnmounted, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 
 import { useCatStore } from '@/stores/cat'
 import { inBetween } from '@/utils/is'
@@ -10,6 +10,9 @@ import { INVOKE_KEY } from '../constants'
 
 const appWindow = getCurrentWebviewWindow()
 const POLL_INTERVAL = 200
+
+/** 悬停隐藏抑制（散步期间置位：移动中的窗口矩形让隐藏/恢复检测全部失真，且隐身散步很怪） */
+export const hoverHideSuppressed = ref(false)
 
 /**
  * 悬停隐藏（局部事件版，无全局键鼠钩子）：
@@ -93,7 +96,7 @@ export function useHoverHide() {
   }
 
   function handleMouseMove() {
-    if (!catStore.window.hideOnHover || hidden) return
+    if (!catStore.window.hideOnHover || hidden || hoverHideSuppressed.value) return
 
     if (cursorCapable === false) return
 
@@ -155,6 +158,11 @@ export function useHoverHide() {
 
   watch(() => catStore.window.hideOnHover, (value) => {
     if (!value) cleanup()
+  })
+
+  // 抑制开启时立即取消延时并恢复可见（散步要动了，先掀开）
+  watch(hoverHideSuppressed, (value) => {
+    if (value) cleanup()
   })
 
   onUnmounted(cleanup)

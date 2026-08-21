@@ -3,6 +3,7 @@ mod utils;
 
 use core::{
     ai::ai_chat,
+    credentials::{get_api_key, set_api_key},
     prevent_default, setup,
     system::{chat_round_begin, chat_round_end, get_cursor_pos, get_idle_seconds},
 };
@@ -33,7 +34,9 @@ pub fn run() {
             get_idle_seconds,
             get_cursor_pos,
             chat_round_begin,
-            chat_round_end
+            chat_round_end,
+            get_api_key,
+            set_api_key
         ])
         .plugin(tauri_plugin_custom_window::init())
         .plugin(tauri_plugin_os::init())

@@ -8,7 +8,7 @@ export interface AiStore {
   shortcut: string
   /** API 中转地址（Anthropic Messages 协议） */
   apiUrl: string
-  /** 直连官方端点时的 API Key（留空走本地中转） */
+  /** @deprecated 已迁移至 Windows 凭据管理器（useAiSecret）；此字段仅作旧明文的迁移载体，加载后置空 */
   apiKey: string
   /** 模型名（直连官方端点时须与该家匹配，如智谱 glm-5.2） */
   model: string

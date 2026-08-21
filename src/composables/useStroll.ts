@@ -8,6 +8,7 @@ import live2d from '@/utils/live2d'
 
 import { INVOKE_KEY, WINDOW_LABEL } from '../constants'
 import { useChat } from './useChat'
+import { hoverHideSuppressed } from './useHoverHide'
 
 const appWindow = getCurrentWebviewWindow()
 
@@ -85,8 +86,10 @@ function stopWaddle() {
 function finishStroll() {
   stopWaddle()
 
+  hoverHideSuppressed.value = false
+
   // 走完回待机
-  live2d.startMotion({ group: 'Idle', no: 0, name: 'Idle_0' })
+  live2d.startMotion({ group: 'Idle', no: 0 })
 
   strolling.value = false
 }
@@ -120,6 +123,9 @@ async function stroll() {
     if ((direction > 0 && x >= room - 20) || (direction < 0 && x <= 20)) direction = -direction
 
     const deadline = Date.now() + MAX_WALK_SECONDS * 1000
+
+    // 散步期间抑制悬停隐藏（移动窗口的矩形会让隐藏/恢复检测失真）
+    hoverHideSuppressed.value = true
 
     await new Promise<void>((resolve) => {
       const step = async () => {

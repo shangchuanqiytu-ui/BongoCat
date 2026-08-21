@@ -439,9 +439,12 @@ function auditDigest(summary: string, dropped: ChatMessage[]) {
 async function callLlm(system: string, user: string, maxTokens: number) {
   const aiStore = useAiStore()
 
+  // key 直读凭据管理器（跨窗实时正确，模块缓存各窗一份会拿到旧值）
+  const apiKey = await invoke<string | null>(INVOKE_KEY.GET_API_KEY).catch(() => null) ?? ''
+
   return invoke<string>(INVOKE_KEY.AI_CHAT, {
     apiUrl: aiStore.apiUrl,
-    apiKey: aiStore.apiKey,
+    apiKey,
     model: aiStore.model,
     system,
     messages: [{ role: 'user', content: user }],
