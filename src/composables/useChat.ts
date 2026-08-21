@@ -1,4 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
+import { emit } from '@tauri-apps/api/event'
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { error as logError } from '@tauri-apps/plugin-log'
 import { useEventListener } from '@vueuse/core'
 import { isString } from 'es-toolkit'
@@ -9,9 +11,12 @@ import { useAiStore } from '@/stores/ai'
 import { useGeneralStore } from '@/stores/general'
 import live2d from '@/utils/live2d'
 
-import { INVOKE_KEY } from '../constants'
+import { INVOKE_KEY, LISTEN_KEY, WINDOW_LABEL } from '../constants'
 import { showWindow } from '../plugins/window'
 import { buildSystemPrompt, dreamCheck, loadPersistedRounds, recordRound, refreshDigest, syncMemoryFromDisk } from './useChatMemory'
+import { useTauriListen } from './useTauriListen'
+
+const appWindow = getCurrentWebviewWindow()
 
 export type ChatStatus = 'idle' | 'thinking' | 'talking' | 'awaiting'
 
@@ -197,6 +202,9 @@ export function useChat() {
 
       await recordRound(question, reply)
 
+      // 广播给其他窗口（主窗借此解除挂起的主动搭话气泡）
+      void emit(LISTEN_KEY.CHAT_ACTIVITY, appWindow.label)
+
       void refreshDigest(dropped)
 
       status.value = 'talking'
@@ -315,35 +323,44 @@ export function useChat() {
     await checkProactive(idleSeconds)
   }
 
+  // 心跳/主动搭话/做梦只在主窗口跑：聊天窗只消费 ask/status，
+  // 否则两套定时器各触发一份主动搭话（聊天窗那份没有气泡，纯幽灵消息）且做梦互踩
   if (!initialized) {
     initialized = true
 
-    scheduleProactive()
+    if (appWindow.label === WINDOW_LABEL.MAIN) {
+      scheduleProactive()
 
-    proactiveCheckTimer = setInterval(onIdleTick, PROACTIVE_CHECK_INTERVAL)
+      proactiveCheckTimer = setInterval(onIdleTick, PROACTIVE_CHECK_INTERVAL)
 
-    // 恢复上次会话的最近对话（Layer 0：重启不清零）
-    void loadPersistedRounds(HISTORY_ROUNDS * 2).then((messages) => {
-      if (messages.length && !history.value.length) history.value = messages
-    })
+      // 恢复上次会话的最近对话（Layer 0：重启不清零）
+      void loadPersistedRounds(HISTORY_ROUNDS * 2).then((messages) => {
+        if (messages.length && !history.value.length) history.value = messages
+      })
 
-    useEventListener(window, 'blur', () => {
-      inputVisible.value = false
-    })
+      // 其他窗口（聊天记录窗）来了新对话：博士已经在聊了，解除挂起的主动搭话气泡
+      useTauriListen(LISTEN_KEY.CHAT_ACTIVITY, ({ payload }) => {
+        if (payload !== appWindow.label && status.value === 'awaiting') resetSpeech()
+      })
 
-    watch(() => [aiStore.proactive.minInterval, aiStore.proactive.maxInterval], scheduleProactive)
+      useEventListener(window, 'blur', () => {
+        inputVisible.value = false
+      })
 
-    onUnmounted(() => {
-      resetSpeech()
+      watch(() => [aiStore.proactive.minInterval, aiStore.proactive.maxInterval], scheduleProactive)
 
-      if (proactiveCheckTimer) {
-        clearInterval(proactiveCheckTimer)
+      onUnmounted(() => {
+        resetSpeech()
 
-        proactiveCheckTimer = void 0
-      }
+        if (proactiveCheckTimer) {
+          clearInterval(proactiveCheckTimer)
 
-      initialized = false
-    })
+          proactiveCheckTimer = void 0
+        }
+
+        initialized = false
+      })
+    }
   }
 
   return {

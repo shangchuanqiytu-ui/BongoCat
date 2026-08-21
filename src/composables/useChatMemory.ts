@@ -316,7 +316,10 @@ export async function recordRound(user: string, assistant: string) {
 
   await appendText(HISTORY_FILE, `${line({ role: 'user', content: user })}${line({ role: 'assistant', content: assistant })}`)
 
-  await appendText(`${DIR}/diary/${today()}.md`, `[${timeHHMM()}] 博士：${user}\n[${timeHHMM()}] 兔兔：${assistant}\n`)
+  // diary 按行消费：多行内容（粘贴）压成单行，避免续行被当独立记忆候选
+  const oneline = (text: string) => text.replace(/\s+/g, ' ').trim()
+
+  await appendText(`${DIR}/diary/${today()}.md`, `[${timeHHMM()}] 博士：${oneline(user)}\n[${timeHHMM()}] 兔兔：${oneline(assistant)}\n`)
 }
 
 /** system 组装：人设 + 长期记忆（截断注入副本）+ 滚动摘要 */
@@ -390,6 +393,9 @@ export async function refreshDigest(dropped: ChatMessage[]) {
 
   try {
     await initChatMemory()
+
+    // 以盘上最新摘要为 base 蒸馏（其他窗口可能刚写入），缩小跨窗覆盖窗口
+    await readStateFromDisk()
 
     const conversation = dropped.map(m => `${m.role === 'user' ? '博士' : '兔兔'}：${m.content}`).join('\n')
 
@@ -529,6 +535,10 @@ export async function runDream(force = false) {
 
   try {
     await initChatMemory()
+
+    // 跨窗安全：偏好的"立即做梦"可能在任意窗口点，先从盘取最新 recall/memory，
+    // 避免陈旧 store 覆盖别窗写入 / 陈旧 memory 导致重复晋级
+    await readStateFromDisk()
 
     const snippets = await collectDiarySnippets()
 

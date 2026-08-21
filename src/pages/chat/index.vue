@@ -27,6 +27,8 @@ const truncated = ref(false)
 
 const sending = ref(false)
 
+const sendFailed = ref(false)
+
 const listRef = ref<HTMLElement>()
 
 const inputRef = ref<HTMLInputElement>()
@@ -77,10 +79,19 @@ async function submit() {
 
   inputRef.value!.value = ''
 
+  sendFailed.value = false
+
   sending.value = true
 
   try {
-    await ask(value)
+    const reply = await ask(value)
+
+    // 发送失败（ask 返回 undefined）：退回输入内容，别让消息凭空消失
+    if (!reply) {
+      inputRef.value!.value = value
+
+      sendFailed.value = true
+    }
 
     await refreshLog()
   } finally {
@@ -200,6 +211,13 @@ onUnmounted(() => {
 
     <!-- 输入区 -->
     <div class="shrink-0 p-3">
+      <div
+        v-if="sendFailed"
+        class="mb-1 px-2 text-red-5 text-xs"
+      >
+        {{ t('pages.main.chat.error') }}
+      </div>
+
       <input
         ref="inputRef"
         class="w-full b-1 px-4 py-2 outline-none text-sm rounded-full"
@@ -208,6 +226,7 @@ onUnmounted(() => {
           backgroundColor: generalStore.appearance.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
           borderColor: generalStore.appearance.isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)',
         }"
+        @input="sendFailed = false"
         @keydown="handleKeydown"
       >
     </div>

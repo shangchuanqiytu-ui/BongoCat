@@ -5,6 +5,8 @@ export const LISTEN_KEY = {
   HIDE_WINDOW: 'hide-window',
   START_MOTION: 'start-motion',
   SET_EXPRESSION: 'set-expression',
+  /** 任一窗口完成一轮对话（payload=来源窗口 label），主窗借此解除挂起的主动搭话 */
+  CHAT_ACTIVITY: 'chat-activity',
 }
 
 export const INVOKE_KEY = {

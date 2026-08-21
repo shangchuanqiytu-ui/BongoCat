@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 
 import ProListItem from '@/components/pro-list-item/index.vue'
 import ProList from '@/components/pro-list/index.vue'
-import { clearMemory, getDigestContent, getDreamsContent, getMemoryContent, initChatMemory, runDream, setMemoryContent } from '@/composables/useChatMemory'
+import { clearMemory, getDigestContent, getDreamsContent, getMemoryContent, runDream, setMemoryContent, syncMemoryFromDisk } from '@/composables/useChatMemory'
 import { useAiStore } from '@/stores/ai'
 
 const { t } = useI18n()
@@ -22,7 +22,9 @@ const dreamsText = ref('')
 const dreaming = ref(false)
 
 async function refreshMemoryViews() {
-  await initChatMemory()
+  // 必须读盘同步（initChatMemory 二次调用是 no-op）：主窗做梦/晋级写盘后这里要看到最新，
+  // 否则用户在陈旧 textarea 上点保存会把新记忆覆盖销毁
+  await syncMemoryFromDisk()
 
   memoryText.value = getMemoryContent()
 
