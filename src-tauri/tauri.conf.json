@@ -33,6 +33,18 @@
         "minWidth": 800,
         "minHeight": 600,
         "skipTaskbar": true
+      },
+      {
+        "label": "chat",
+        "url": "index.html/#/chat",
+        "visible": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "width": 400,
+        "height": 620,
+        "minWidth": 340,
+        "minHeight": 420,
+        "skipTaskbar": true
       }
     ],
     "security": {

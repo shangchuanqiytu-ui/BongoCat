@@ -4,12 +4,21 @@
       "chat": {
         "placeholder": "和兔兔说点什么...",
         "thinking": "让我想想...",
-        "error": "呜...信号不太好，稍后再试试吧"
+        "error": "呜...信号不太好，稍后再试试吧",
+        "reply": "回复",
+        "skip": "跳过"
       },
       "hints": {
         "redrawing": "重绘中...",
         "switching": "切换中..."
       }
+    },
+    "chat": {
+      "title": "和兔兔的聊天",
+      "placeholder": "和兔兔说点什么...",
+      "thinking": "让我想想...",
+      "empty": "还没有聊过天，点击宠物或在这里开始～",
+      "onlyLatest": "仅显示最近 {count} 条"
     },
     "preference": {
       "title": "偏好设置",
@@ -172,6 +181,7 @@
     "useAppMenu": {
       "labels": {
         "preference": "偏好设置...",
+        "chatLog": "聊天记录...",
         "hideCat": "隐藏猫咪",
         "showCat": "显示猫咪",
         "passThrough": "窗口穿透",

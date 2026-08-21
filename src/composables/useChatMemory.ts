@@ -91,6 +91,13 @@ interface ChatMessage {
   content: string
 }
 
+/** 聊天记录窗口用条目（带时间戳；旧记录无 t 字段则省略） */
+export interface ChatLogEntry {
+  t?: number
+  role: 'user' | 'assistant'
+  content: string
+}
+
 interface RecallEntry {
   snippet: string
   days: string[]
@@ -276,13 +283,36 @@ export async function loadPersistedRounds(maxMessages: number) {
   return messages.slice(-maxMessages)
 }
 
+/** 聊天记录窗口用：读取完整对话日志（末尾 limit 行，含时间戳） */
+export async function loadChatLog(limit = 1000): Promise<ChatLogEntry[]> {
+  await initChatMemory()
+
+  const lines = (await readTextIfExists(HISTORY_FILE)).split('\n').filter(Boolean).slice(-limit)
+
+  const entries: ChatLogEntry[] = []
+
+  for (const line of lines) {
+    try {
+      const parsed = JSON.parse(line) as ChatLogEntry
+
+      if ((parsed.role === 'user' || parsed.role === 'assistant') && parsed.content) {
+        entries.push({ t: parsed.t, role: parsed.role, content: parsed.content })
+      }
+    } catch {
+      // 跳过损坏行
+    }
+  }
+
+  return entries
+}
+
 /** 每轮对话落盘：history.jsonl + 今日 diary（机械追加，零 LLM） */
 export async function recordRound(user: string, assistant: string) {
   if (!useAiStore().memoryEnabled) return
 
   await initChatMemory()
 
-  const line = (msg: ChatMessage) => `${JSON.stringify(msg)}\n`
+  const line = (msg: ChatMessage) => `${JSON.stringify({ t: Date.now(), ...msg })}\n`
 
   await appendText(HISTORY_FILE, `${line({ role: 'user', content: user })}${line({ role: 'assistant', content: assistant })}`)
 

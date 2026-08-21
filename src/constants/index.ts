@@ -25,4 +25,5 @@ export const LANGUAGE = {
 export const WINDOW_LABEL = {
   MAIN: 'main',
   PREFERENCE: 'preference',
+  CHAT: 'chat',
 } as const

@@ -13,7 +13,7 @@ import { INVOKE_KEY } from '../constants'
 import { showWindow } from '../plugins/window'
 import { buildSystemPrompt, dreamCheck, loadPersistedRounds, recordRound, refreshDigest, syncMemoryFromDisk } from './useChatMemory'
 
-export type ChatStatus = 'idle' | 'thinking' | 'talking'
+export type ChatStatus = 'idle' | 'thinking' | 'talking' | 'awaiting'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -112,7 +112,7 @@ function stopMouth() {
   }
 }
 
-function startTyping(text: string) {
+function startTyping(text: string, holdWhenDone = false) {
   displayText.value = ''
 
   // 每帧字数随长度伸缩，保证长文本约 5s 内打完
@@ -131,7 +131,12 @@ function startTyping(text: string) {
 
     stopMouth()
 
-    scheduleHide()
+    // 主动搭话说完保持挂起（等博士回复/跳过）；自己问的 8s 自动收起
+    if (holdWhenDone) {
+      status.value = 'awaiting'
+    } else {
+      scheduleHide()
+    }
   }, TYPE_INTERVAL)
 }
 
@@ -157,7 +162,11 @@ export function useChat() {
   const aiStore = useAiStore()
   const generalStore = useGeneralStore()
 
-  async function ask(question: string) {
+  /**
+   * 发起一轮对话。hold=true（主动搭话）说完保持挂起等博士回复/跳过；
+   * 返回回复文本（聊天记录窗可直接消费），失败返回 undefined。
+   */
+  async function ask(question: string, options?: { hold?: boolean }) {
     if (!aiStore.enabled) return
 
     // 任何一次对话（含主动搭话本身）都重新随机下一轮
@@ -167,11 +176,11 @@ export function useChat() {
 
     status.value = 'thinking'
 
-    const messages = [...history.value, { role: 'user' as const, content: question }]
-
     try {
-      // 先从盘上同步记忆（做梦可能在别的窗口写盘）
-      await syncMemoryFromDisk()
+      // 先从盘上同步：聊天窗/宠物窗共用磁盘态，历史与记忆都以盘为准
+      const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2), syncMemoryFromDisk()])
+
+      const messages = [...persisted, { role: 'user' as const, content: question }]
 
       const reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
         apiUrl: aiStore.apiUrl,
@@ -186,7 +195,7 @@ export function useChat() {
 
       history.value = nextHistory.slice(-HISTORY_ROUNDS * 2)
 
-      void recordRound(question, reply)
+      await recordRound(question, reply)
 
       void refreshDigest(dropped)
 
@@ -194,9 +203,11 @@ export function useChat() {
 
       isError.value = false
 
-      startTyping(reply)
+      startTyping(reply, options?.hold === true)
 
       startMouth()
+
+      return reply
     } catch (err) {
       logError(isString(err) ? err : JSON.stringify(err))
 
@@ -268,7 +279,7 @@ export function useChat() {
     if (pendingProactiveGreeting && back) {
       pendingProactiveGreeting = false
 
-      void ask(buildProactiveInstruction('returned'))
+      void ask(buildProactiveInstruction('returned'), { hold: true })
 
       return
     }
@@ -284,7 +295,14 @@ export function useChat() {
       return
     }
 
-    void ask(buildProactiveInstruction('present'))
+    void ask(buildProactiveInstruction('present'), { hold: true })
+  }
+
+  /** 跳过挂起中的主动搭话（消息已在聊天记录里，只是收起气泡） */
+  function skipProactive() {
+    if (status.value !== 'awaiting') return
+
+    resetSpeech()
   }
 
   /** 心跳：查一次系统空闲，喂给主动搭话和空闲做梦两条链 */
@@ -336,5 +354,6 @@ export function useChat() {
     ask,
     submit,
     openInput,
+    skipProactive,
   }
 }

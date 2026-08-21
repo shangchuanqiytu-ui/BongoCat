@@ -68,6 +68,10 @@ export function useAppMenu() {
         action: () => showWindow(WINDOW_LABEL.PREFERENCE),
       }),
       MenuItem.new({
+        text: t('composables.useAppMenu.labels.chatLog'),
+        action: () => showWindow(WINDOW_LABEL.CHAT),
+      }),
+      MenuItem.new({
         text: catStore.window.visible ? t('composables.useAppMenu.labels.hideCat') : t('composables.useAppMenu.labels.showCat'),
         action: () => {
           catStore.window.visible = !catStore.window.visible

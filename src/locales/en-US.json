@@ -4,12 +4,21 @@
       "chat": {
         "placeholder": "Say something to the bunny...",
         "thinking": "Let me think...",
-        "error": "Uh-oh... bad signal, try again later"
+        "error": "Uh-oh... bad signal, try again later",
+        "reply": "Reply",
+        "skip": "Skip"
       },
       "hints": {
         "redrawing": "Redrawing...",
         "switching": "Switching..."
       }
+    },
+    "chat": {
+      "title": "Chat with the bunny",
+      "placeholder": "Say something to the bunny...",
+      "thinking": "Let me think...",
+      "empty": "No chats yet — click the pet or start here~",
+      "onlyLatest": "Showing the latest {count} messages"
     },
     "preference": {
       "title": "Preferences",
@@ -172,6 +181,7 @@
     "useAppMenu": {
       "labels": {
         "preference": "Preferences...",
+        "chatLog": "Chat History...",
         "hideCat": "Hide Cat",
         "showCat": "Show Cat",
         "passThrough": "Pass Through",
