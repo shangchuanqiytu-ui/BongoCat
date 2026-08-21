@@ -21,22 +21,26 @@ interface IdleAction {
 }
 
 /**
- * 闲时行为表：IdleExtra 组的小动作按权重随机轮换（参考 VPet 状态机 + Live2D 官方 idle 轮换）。
- * 不塞进 Idle 组——框架的 idle 回归会等概率随机选，会把大动作也随机播出来，无法按时段/在场状态门控。
+ * 闲时行为表：微动作（晃身/哼歌/开心眯眼）做高频主力，中动作低频点缀（参考 VPet 状态机 +
+ * Live2D 官方 idle 轮换）。不塞进 Idle 组——框架的 idle 回归会等概率随机选，无法按权重/时段门控。
  */
 const IDLE_ACTIONS: IdleAction[] = [
-  { group: 'lookaround', weight: 26 },
-  { group: 'wiggle', weight: 20 },
-  { group: 'stretch', weight: 18 },
-  { group: 'yawn', weight: 16, hours: [[22, 7]] },
-  { group: 'hungry', weight: 14, hours: [[11, 13], [17, 19]] },
-  { group: 'hop', weight: 10, requireAway: true },
-  { group: 'crouch', weight: 8, requireAway: true },
+  { group: 'sway', weight: 30 },
+  { group: 'happy', weight: 16 },
+  { group: 'hum', weight: 14 },
+  { group: 'lookaround', weight: 12 },
+  { group: 'wiggle', weight: 10 },
+  { group: 'stretch', weight: 6 },
+  { group: 'yawn', weight: 4, hours: [[22, 7]] },
+  { group: 'hungry', weight: 4, hours: [[11, 13], [17, 19]] },
+  { group: 'hop', weight: 8, requireAway: true },
+  { group: 'crouch', weight: 6, requireAway: true },
 ]
 
-const CHECK_INTERVAL = 5_000
-const MIN_GAP = 30_000
-const MAX_GAP = 90_000
+const CHECK_INTERVAL = 2_000
+/** 微动作节奏：8~20 秒一个小动作（太稀疏=木桩，实测 30~90s 完全不够活泼） */
+const MIN_GAP = 8_000
+const MAX_GAP = 20_000
 /** 大动作门槛：系统空闲超过 2 分钟 */
 const AWAY_MS = 120_000
 /** 情绪延续：对话后 5 分钟内闲时 20% 概率回放当时的表情 */

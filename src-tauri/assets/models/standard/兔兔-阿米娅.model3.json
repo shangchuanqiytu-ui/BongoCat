@@ -191,6 +191,21 @@
           "File": "motion-wave.motion3.json"
         }
       ],
+      "sway": [
+        {
+          "File": "motion-idle-sway.motion3.json"
+        }
+      ],
+      "hum": [
+        {
+          "File": "motion-idle-hum.motion3.json"
+        }
+      ],
+      "happy": [
+        {
+          "File": "motion-idle-happy.motion3.json"
+        }
+      ],
       "stretch": [
         {
           "File": "motion-idle-stretch.motion3.json"

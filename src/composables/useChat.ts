@@ -131,12 +131,20 @@ function scheduleHide() {
   }, HIDE_DELAY)
 }
 
-/** 说话嘴部动画：100ms 随机张合。override 永久生效且无 unset API，必须配对归零 */
+/** 说话嘴部动画 + 身体轻摆相位：100ms 随机张合、±2.5° 正弦摆。override 永久生效且无 unset API，必须配对归零 */
+let swayPhase = 0
+
 function startMouth() {
   if (!live2d.getParameterValueRange(MOUTH_PARAM_ID)) return
 
+  swayPhase = 0
+
   mouthTimer = setInterval(() => {
+    swayPhase += 0.25
+
     live2d.setParameterValue(MOUTH_PARAM_ID, Math.random() * MOUTH_MAX)
+
+    live2d.setParameterValue('ParamAngleZ', Math.sin(swayPhase) * 2.5)
   }, MOUTH_INTERVAL)
 }
 
@@ -150,6 +158,8 @@ function stopMouth() {
   if (live2d.getParameterValueRange(MOUTH_PARAM_ID)) {
     live2d.setParameterValue(MOUTH_PARAM_ID, 0)
   }
+
+  live2d.setParameterValue('ParamAngleZ', 0)
 }
 
 function startTyping(text: string, holdWhenDone = false) {
