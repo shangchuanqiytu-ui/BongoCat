@@ -1,10 +1,10 @@
 import { invoke } from '@tauri-apps/api/core'
 import { PhysicalPosition } from '@tauri-apps/api/dpi'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
+import { availableMonitors } from '@tauri-apps/api/window'
 import { onUnmounted, ref } from 'vue'
 
 import live2d from '@/utils/live2d'
-import { getCursorMonitor } from '@/utils/monitor'
 
 import { INVOKE_KEY, WINDOW_LABEL } from '../constants'
 import { useChat } from './useChat'
@@ -27,7 +27,25 @@ const MAX_WALK_SECONDS = 20
 /** 人回来（键鼠恢复活动）立即停 */
 const INTERRUPT_IDLE_SECONDS = 3
 
+/** 窗口所在显示器（散步用窗口的屏，不能用光标的——光标在副屏会把宠物带去副屏悬空走） */
+async function getWindowMonitor() {
+  const monitors = await availableMonitors().catch(() => [])
+  if (!monitors.length) return null
+
+  const pos = await appWindow.outerPosition().catch(() => null)
+  if (pos) {
+    const hit = monitors.find(m => pos.x >= m.position.x && pos.x < m.position.x + m.size.width
+      && pos.y >= m.position.y && pos.y < m.position.y + m.size.height)
+    if (hit) return hit
+  }
+
+  return monitors[0]
+}
+
 let initialized = false
+
+/** 散步代数：打断/卸载时自增，旧 step 链 await 恢复后发现自己过期即自杀（防逃逸 timer） */
+let strollGeneration = 0
 
 let checkTimer: ReturnType<typeof setInterval> | undefined
 
@@ -56,8 +74,12 @@ function stopWaddle() {
     waddleTimer = void 0
   }
 
+  // 先归零再删 override 表项——只归零不删会永久压住 Param13/ParamAngleZ，
+  // 第一次散步后蹦跳（hop）和下蹲（crouch）的位移通道就被冻结了
   live2d.setParameterValue('Param13', 0)
   live2d.setParameterValue('ParamAngleZ', 0)
+  live2d.unsetParameterValue('Param13')
+  live2d.unsetParameterValue('ParamAngleZ')
 }
 
 function finishStroll() {
@@ -69,24 +91,30 @@ function finishStroll() {
   strolling.value = false
 }
 
-/** 走一程：沿当前显示器底边缓步移动，人回来/对话开始/到边/超时即停 */
+/** 走一程：沿窗口所在显示器底边缓步移动，人回来/对话开始/到边/超时/IPC 失败即停 */
 async function stroll() {
   const { status, inputVisible } = useChat()
+
+  const generation = ++strollGeneration
 
   strolling.value = true
 
   try {
-    const monitor = await getCursorMonitor().catch(() => null)
-    const monitorX = monitor?.position.x ?? 0
-    const monitorWidth = monitor?.size.width ?? 1920
+    // 窗口所在显示器（光标所在会把宠物带去别的屏），失败则放弃本次散步
+    const monitor = await getWindowMonitor()
+    if (!monitor) return
+
+    const { position: monPos, size: monSize } = monitor
 
     const size = await appWindow.outerSize()
     const position = await appWindow.outerPosition()
-    const baselineY = position.y
 
-    const room = Math.max(0, monitorWidth - size.width)
-    let x = Math.min(Math.max(position.x - monitorX, 0), room)
+    const room = Math.max(0, monSize.width - size.width)
+    let x = Math.min(Math.max(position.x - monPos.x, 0), room)
     let direction = Math.random() < 0.5 ? 1 : -1
+
+    // 贴住显示器底边行走（保持物理像素）
+    const baselineY = monPos.y + monSize.height - size.height
 
     // 起点贴边则反向出发
     if ((direction > 0 && x >= room - 20) || (direction < 0 && x <= 20)) direction = -direction
@@ -95,6 +123,9 @@ async function stroll() {
 
     await new Promise<void>((resolve) => {
       const step = async () => {
+        // 本链已过期（被打断/卸载/新链开启）→ 自杀，不再 arm 下一个 timer
+        if (generation !== strollGeneration || !strolling.value) return resolve()
+
         // 人回来了（键鼠恢复活动）→ 收步
         const idleSeconds = await invoke<number | null>(INVOKE_KEY.GET_IDLE_SECONDS).catch(() => null)
         if (idleSeconds !== null && idleSeconds < INTERRUPT_IDLE_SECONDS) return resolve()
@@ -115,14 +146,17 @@ async function stroll() {
           }
         }
 
-        await appWindow.setPosition(new PhysicalPosition({ x: monitorX + x, y: baselineY }))
+        // IPC 失败（窗口销毁等）不让 promise 悬挂——散步系统会永久卡死
+        await appWindow.setPosition(new PhysicalPosition({ x: monPos.x + x, y: baselineY })).catch(() => resolve())
+
+        if (generation !== strollGeneration) return resolve()
 
         if (Date.now() >= deadline) return resolve()
 
-        walkTimer = setTimeout(step, STEP_INTERVAL)
+        walkTimer = setTimeout(() => void step().catch(() => resolve()), STEP_INTERVAL)
       }
 
-      void step()
+      void step().catch(() => resolve())
     })
   } finally {
     if (walkTimer) {
@@ -131,7 +165,8 @@ async function stroll() {
       walkTimer = void 0
     }
 
-    finishStroll()
+    // 只有自己的链还活着才收尾（新链的 finishStroll 归新链）
+    if (generation === strollGeneration) finishStroll()
   }
 }
 
@@ -157,6 +192,8 @@ export function useStroll() {
     checkTimer = setInterval(check, CHECK_INTERVAL)
 
     onUnmounted(() => {
+      strollGeneration++
+
       if (walkTimer) clearTimeout(walkTimer)
 
       if (checkTimer) {

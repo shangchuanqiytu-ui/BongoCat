@@ -86,7 +86,7 @@ const EMOTION_TAG_RE = /^\s*[【[]([^】\]]{1,12})[】\]]\s*/
 /** 最近一次对话情绪（闲时行为借它做"情绪延续"：刚聊完开心，之后几分钟偶尔冒微笑） */
 export const lastEmotion = ref<{ name: string, at: number }>()
 
-/** 纯特效型表情（舞台灯光/背景/音符等）——不是情绪脸，进候选池只会干扰模型选择 */
+/** 纯特效/道具型表情（舞台灯光/背景/音符/饭碗等）——不是情绪脸，进候选池只会干扰模型选择 */
 const NON_EMOTION_EXPRESSIONS = new Set([
   '复位',
   '蓝色灯光',
@@ -96,6 +96,11 @@ const NON_EMOTION_EXPRESSIONS = new Set([
   '粉色音符',
   '蓝色音符',
   '翻手',
+  '脱外套',
+  '端锅',
+  '喇叭',
+  '敲门',
+  '吃饭',
 ])
 
 /** 对话动作标签的中文→动作组映射（组名即 model3.json 的 Motions key） */
@@ -155,11 +160,15 @@ function stopMouth() {
     mouthTimer = void 0
   }
 
+  // 先写 0 让嘴立刻闭上/身体立刻回正，再删 override 表项——
+  // 只写 0 不删表项会永久压制这两个参数的动作曲线（说话后歪身/晃身全被冻住）
   if (live2d.getParameterValueRange(MOUTH_PARAM_ID)) {
     live2d.setParameterValue(MOUTH_PARAM_ID, 0)
   }
 
   live2d.setParameterValue('ParamAngleZ', 0)
+  live2d.unsetParameterValue(MOUTH_PARAM_ID)
+  live2d.unsetParameterValue('ParamAngleZ')
 }
 
 function startTyping(text: string, holdWhenDone = false) {
@@ -238,13 +247,19 @@ export function useChat() {
         const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2, { rotate: true }), syncMemoryFromDisk()])
 
         // 历史回复展示/落盘时已剥掉情绪标签，直接喂回会让模型模仿"无标签"格式（多轮格式漂移）；
-        // 给历史 assistant 补随机合法标签做 few-shot 锚点（随机而非固定——固定值会让模型"抄答案"，
-        // 每轮都选锚点那对表情/动作；随机化展示"从列表按语境选"的多样性）
+        // 给历史 assistant 补随机合法标签做 few-shot 锚点（随机而非固定——固定值会让模型"抄答案"；
+        // 动作标签按协议是可选的，锚点也 50% 只带表情，避免模型把双标签当必选、把标签写进正文中间）
         const exprNames = modelStore.currentExpressions.map(item => item.name).filter(name => !NON_EMOTION_EXPRESSIONS.has(name))
         const motionNames = Object.keys(MOTION_LABELS)
         const pickRandom = <T>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
         const anchored = aiStore.emotionEnabled && exprNames.length && motionNames.length
-          ? persisted.map(item => (item.role === 'assistant' ? { ...item, content: `[${pickRandom(exprNames)}][${pickRandom(motionNames)}]${item.content}` } : item))
+          ? persisted.map((item) => {
+              if (item.role !== 'assistant') return item
+
+              const tags = Math.random() < 0.5 ? `[${pickRandom(exprNames)}]` : `[${pickRandom(exprNames)}][${pickRandom(motionNames)}]`
+
+              return { ...item, content: `${tags}${item.content}` }
+            })
           : persisted
 
         const messages = [...anchored, { role: 'user' as const, content: question }]
@@ -278,6 +293,12 @@ export function useChat() {
               if (MOTION_LABELS[secondTag]) motion = MOTION_LABELS[secondTag]
             }
           }
+
+          // 模型偶尔把标签写进正文中间（锚点式 few-shot 会抬高这个概率）：
+          // 正文里恰好等于合法表情/动作名的方括号标签一并剥掉，只剥合法名、不误伤普通方括号
+          const validTagNames = [...exprNames, ...motionNames]
+          const strayTagRe = new RegExp(`\\s*[【[](?:${validTagNames.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})[】\]]`, 'g')
+          reply = reply.replace(strayTagRe, '')
         }
 
         // 内存历史保持干净（不带锚点前缀）；锚点只存在于上方的 LLM 请求里

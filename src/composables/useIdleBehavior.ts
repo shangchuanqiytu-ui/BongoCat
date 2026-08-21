@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { onUnmounted } from 'vue'
 
+import { useAiStore } from '@/stores/ai'
 import { useModelStore } from '@/stores/model'
 import live2d from '@/utils/live2d'
 
@@ -89,6 +90,7 @@ export function useIdleBehavior() {
 
     const { status, inputVisible } = useChat()
     const modelStore = useModelStore()
+    const aiStore = useAiStore()
 
     scheduleNext()
 
@@ -98,10 +100,10 @@ export function useIdleBehavior() {
       // 对话进行中/挂起等回复/输入框打开/散步中：兔兔别抢戏
       if (status.value !== 'idle' || inputVisible.value || strolling.value) return
 
-      // 情绪延续：刚聊完的情绪偶尔冒头，比随机动作更像"还想着刚才的事"
+      // 情绪延续：刚聊完的情绪偶尔冒头，比随机动作更像"还想着刚才的事"（开关关了就不再回放）
       const emotion = lastEmotion.value
 
-      if (emotion && Date.now() - emotion.at < EMOTION_LINGER && Math.random() < EMOTION_REPLAY_CHANCE) {
+      if (aiStore.emotionEnabled && emotion && Date.now() - emotion.at < EMOTION_LINGER && Math.random() < EMOTION_REPLAY_CHANCE) {
         const index = modelStore.currentExpressions.findIndex(item => item.name === emotion.name)
 
         if (index >= 0) {
@@ -117,7 +119,12 @@ export function useIdleBehavior() {
 
       const action = pickAction(idleMs >= AWAY_MS)
 
-      if (!action) return
+      // 空池也要重排下一次，否则 nextAt 停在过去导致每次心跳空转
+      if (!action) {
+        scheduleNext()
+
+        return
+      }
 
       live2d.startMotion({ group: action.group, no: 0, name: `${action.group}_0` })
 

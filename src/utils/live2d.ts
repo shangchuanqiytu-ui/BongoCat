@@ -178,6 +178,19 @@ class Live2d {
     this.model?.setParameterValueById(id, Number(value), weight)
   }
 
+  /**
+   * 解除参数 override：删除持久覆盖表项。写 0 ≠ 解除——表项会以 0 每帧压住该参数，
+   * 冻结后续所有动作曲线的相关通道（如说话摇摆后 ParamAngleZ 被压 0，歪头/晃身全失效）。
+   * 上游无 unset API（easy-live2d ParameterOverrideMap 只有 set/apply），按内部结构删除表项。
+   */
+  public unsetParameterValue(id: string) {
+    const sprite = this.model as unknown as {
+      _model?: { _parameterOverrides?: { _byId?: { delete: (key: string) => void } } }
+    } | null
+
+    sprite?._model?._parameterOverrides?._byId?.delete(id)
+  }
+
   /** 取参数取值范围；模型没有该参数时返回 undefined */
   public getParameterValueRange(id: string) {
     return this.model?.getParameterValueRangeById(id) ?? undefined
