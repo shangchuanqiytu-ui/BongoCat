@@ -1,0 +1,122 @@
+{
+	"Version": 3,
+	"Meta": {
+		"Duration": 1.6,
+		"Fps": 30.0,
+		"Loop": false,
+		"AreBeziersRestricted": true,
+		"CurveCount": 4,
+		"TotalSegmentCount": 14,
+		"TotalPointCount": 34,
+		"UserDataCount": 0,
+		"TotalUserDataSize": 0
+	},
+	"Curves": [
+		{
+			"Target": "Parameter",
+			"Id": "ParamExpression17",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.1,
+				0,
+				0.15,
+				1,
+				0.25,
+				1,
+				0,
+				1.25,
+				1,
+				1,
+				1.4,
+				1,
+				1.5,
+				0,
+				1.6,
+				0
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Id": "ParamExpression36",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.1,
+				0,
+				0.15,
+				1,
+				0.25,
+				1,
+				0,
+				1.25,
+				1,
+				1,
+				1.4,
+				1,
+				1.5,
+				0,
+				1.6,
+				0
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Id": "ParamAngleZ",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.12,
+				0,
+				0.18,
+				10,
+				0.3,
+				10,
+				1,
+				0.5,
+				10,
+				0.6,
+				-6,
+				0.8,
+				-6,
+				1,
+				1.0,
+				-6,
+				1.1,
+				6,
+				1.3,
+				6,
+				1,
+				1.42,
+				6,
+				1.5,
+				0,
+				1.6,
+				0
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Id": "ParamMouthOpenY",
+			"Segments": [
+				0,
+				0,
+				0,
+				0.4,
+				0.5,
+				0,
+				0.7,
+				0,
+				0,
+				1.0,
+				0.6,
+				0,
+				1.3,
+				0
+			]
+		}
+	]
+}

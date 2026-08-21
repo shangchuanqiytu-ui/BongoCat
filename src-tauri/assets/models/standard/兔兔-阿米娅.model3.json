@@ -81,6 +81,66 @@
         "File": "mark-shock.exp3.json"
       },
       {
+        "Name": "眯眼",
+        "File": "emote-squint.exp3.json"
+      },
+      {
+        "Name": "耳朵惊",
+        "File": "emote-shock-ears.exp3.json"
+      },
+      {
+        "Name": "大吃一惊",
+        "File": "emote-surprise.exp3.json"
+      },
+      {
+        "Name": "庆祝·举手",
+        "File": "hand-celebrate2.exp3.json"
+      },
+      {
+        "Name": "庆祝·双手",
+        "File": "hand-celebrate3.exp3.json"
+      },
+      {
+        "Name": "欢呼",
+        "File": "emote-cheer.exp3.json"
+      },
+      {
+        "Name": "敲门",
+        "File": "arm-knock.exp3.json"
+      },
+      {
+        "Name": "认真",
+        "File": "emote-atention.exp3.json"
+      },
+      {
+        "Name": "翻手",
+        "File": "hand-turn.exp3.json"
+      },
+      {
+        "Name": "蓝色灯光",
+        "File": "light-blue.exp3.json"
+      },
+      {
+        "Name": "黄色灯光",
+        "File": "light-yellow.exp3.json"
+      },
+      {
+        "Name": "红色灯光",
+        "File": "light-red.exp3.json"
+      },
+      {
+        "Name": "背景出场",
+        "File": "bg-on.exp3.json"
+      },
+      {
+        "Name": "粉色音符",
+        "File": "music-pink.exp3.json"
+      },
+      {
+        "Name": "蓝色音符",
+        "File": "music-blue.exp3.json"
+      },
+      {
         "Name": "复位",
         "File": "reset.exp3.json"
       }
@@ -109,6 +169,26 @@
       "weapon": [
         {
           "File": "motion-weapon.motion3.json"
+        }
+      ],
+      "nod": [
+        {
+          "File": "motion-nod.motion3.json"
+        }
+      ],
+      "shake": [
+        {
+          "File": "motion-shake.motion3.json"
+        }
+      ],
+      "tilt": [
+        {
+          "File": "motion-tilt.motion3.json"
+        }
+      ],
+      "wave": [
+        {
+          "File": "motion-wave.motion3.json"
         }
       ],
       "Idle": [
