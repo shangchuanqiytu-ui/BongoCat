@@ -1,6 +1,182 @@
 {
- "Type": "Live2D Expression",
- "FadeInTime": 0.5,
- "FadeOutTime": 0.5,
- "Parameters": []
+	"Type": "Live2D Expression",
+	"FadeInTime": 0.3,
+	"FadeOutTime": 0.3,
+	"Parameters": [
+		{
+			"Id": "Param10",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "Param11",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "Param2",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "Param3",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "Param4",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression01",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression1",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression11",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression12",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression15",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression16",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression18",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression19",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression2",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression20",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression21",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression23",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression24",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression26",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression28",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression29",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression3",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression30",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression31",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression32",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression33",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression34",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression35",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression36",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression37",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression4",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression43",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression5",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression6",
+			"Value": 0,
+			"Blend": "Overwrite"
+		},
+		{
+			"Id": "ParamExpression9",
+			"Value": 0,
+			"Blend": "Overwrite"
+		}
+	]
 }
