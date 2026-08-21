@@ -21,12 +21,19 @@ const dreamsText = ref('')
 
 const dreaming = ref(false)
 
+/** 上次载入/保存的快照：textarea 有未保存编辑时聚焦刷新不覆盖（用户输入优先） */
+let savedSnapshot = ''
+
 async function refreshMemoryViews() {
   // 必须读盘同步（initChatMemory 二次调用是 no-op）：主窗做梦/晋级写盘后这里要看到最新，
   // 否则用户在陈旧 textarea 上点保存会把新记忆覆盖销毁
   await syncMemoryFromDisk()
 
-  memoryText.value = getMemoryContent()
+  if (memoryText.value === savedSnapshot) {
+    memoryText.value = getMemoryContent()
+
+    savedSnapshot = memoryText.value
+  }
 
   digestText.value = getDigestContent()
 
@@ -53,6 +60,8 @@ async function saveMemory() {
 
   memoryText.value = getMemoryContent()
 
+  savedSnapshot = memoryText.value
+
   message.success(t('pages.preference.ai.hints.memorySaved'))
 }
 
@@ -60,6 +69,8 @@ async function onClear() {
   await clearMemory()
 
   memoryText.value = ''
+
+  savedSnapshot = ''
 
   digestText.value = ''
 

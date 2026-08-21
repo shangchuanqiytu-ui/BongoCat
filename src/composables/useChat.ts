@@ -76,6 +76,9 @@ let nextProactiveAt = 0
 /** 到点时博士不在：起意等回来，绝不把气泡说给空气听 */
 let pendingProactiveGreeting = false
 
+/** 本轮（主动搭话）的气泡打完要挂起等互动：跨窗事件在打字中到达时按此判定收起 */
+let holdBubble = false
+
 let initialized = false
 
 function clearTypewriter() {
@@ -161,6 +164,8 @@ function resetSpeech() {
   displayText.value = ''
 
   isError.value = false
+
+  holdBubble = false
 }
 
 export function useChat() {
@@ -180,12 +185,14 @@ export function useChat() {
 
     resetSpeech()
 
+    holdBubble = options?.hold === true
+
     status.value = 'thinking'
 
     return await withChatRoundLock(async () => {
       try {
-        // 先从盘上同步：聊天窗/宠物窗共用磁盘态，历史与记忆都以盘为准
-        const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2), syncMemoryFromDisk()])
+        // 先从盘上同步：聊天窗/宠物窗共用磁盘态，历史与记忆都以盘为准（锁内轮转）
+        const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2, { rotate: true }), syncMemoryFromDisk()])
 
         const messages = [...persisted, { role: 'user' as const, content: question }]
 
@@ -341,9 +348,10 @@ export function useChat() {
         if (messages.length && !history.value.length) history.value = messages
       })
 
-      // 其他窗口（聊天记录窗）来了新对话：博士已经在聊了，解除挂起的主动搭话气泡
+      // 其他窗口（聊天记录窗）来了新对话：博士已经在聊了，解除挂起/正在打的主动搭话气泡
+      // （打字中 status 还是 talking，靠 holdBubble 兜住，否则打完会转 awaiting 永挂）
       useTauriListen(LISTEN_KEY.CHAT_ACTIVITY, ({ payload }) => {
-        if (payload !== appWindow.label && status.value === 'awaiting') resetSpeech()
+        if (payload !== appWindow.label && (status.value === 'awaiting' || holdBubble)) resetSpeech()
       })
 
       useEventListener(window, 'blur', () => {

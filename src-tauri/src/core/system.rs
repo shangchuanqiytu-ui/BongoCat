@@ -1,24 +1,65 @@
 //! 系统级查询（替代已删除的全局键鼠钩子）：空闲时长、光标位置、对话轮次互斥。
 //! 查询式 API，不装钩子、不需要管理员权限。
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 全进程"对话轮次进行中"标志：所有窗口（宠物/聊天记录）共享一个进程，
-/// 以 CAS 实现跨窗口互斥——同一时刻只允许一轮对话在飞（读快照→LLM→落盘），
-/// 消除多窗口并发读写的竞态。进程退出标志即消失，无死锁残留，
-/// 因此不需要 OpenClaw 那种文件锁的过期偷锁逻辑。
+/// 以 CAS 实现跨窗口互斥——同一时刻只允许一轮对话在飞（读快照→LLM→落盘）。
 static CHAT_ROUND_ACTIVE: AtomicBool = AtomicBool::new(false);
 
-/// 尝试抢占对话轮次：返回 true=抢到（此前空闲），false=别窗正在对话中。
-#[tauri::command]
-pub fn chat_round_begin() -> bool {
-    !CHAT_ROUND_ACTIVE.swap(true, Ordering::SeqCst)
+/// 持锁令牌：只有 token 匹配的持有者才能释放，
+/// 防止"IPC 抖动导致未持锁却误归还"偷掉别窗正在持有的锁。
+static CHAT_ROUND_TOKEN: AtomicU32 = AtomicU32::new(0);
+
+static CHAT_ROUND_TOKEN_SEQ: AtomicU32 = AtomicU32::new(0);
+
+/// 持锁时刻（ms）：单 webview 崩溃时 JS 的 finally 不会执行、进程却还活着，
+/// 超过 STALE 阈值后允许下一轮直接接管（等价 OpenClaw 文件锁的过期偷锁）。
+static CHAT_ROUND_ACQUIRED_AT: AtomicU64 = AtomicU64::new(0);
+
+/// 偷锁阈值：正常一轮 ≤35s（LLM 30s 超时），前端最长自旋 75s 后降级，
+/// 120s 足以覆盖健康轮次，又不至于卡死太久。
+const CHAT_ROUND_STALE_MS: u64 = 120_000;
+
+fn now_ms() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
-/// 归还对话轮次。
+/// 尝试抢占对话轮次：抢到返回本次的 token（正整数），被占返回 None；
+/// 持锁超过 STALE 阈值视为持有者已死，直接接管（换新 token）。
 #[tauri::command]
-pub fn chat_round_end() {
-    CHAT_ROUND_ACTIVE.store(false, Ordering::SeqCst);
+pub fn chat_round_begin() -> Option<u32> {
+    let token = CHAT_ROUND_TOKEN_SEQ.fetch_add(1, Ordering::SeqCst) + 1;
+
+    if !CHAT_ROUND_ACTIVE.swap(true, Ordering::SeqCst) {
+        CHAT_ROUND_TOKEN.store(token, Ordering::SeqCst);
+
+        CHAT_ROUND_ACQUIRED_AT.store(now_ms(), Ordering::SeqCst);
+
+        return Some(token);
+    }
+
+    let acquired_at = CHAT_ROUND_ACQUIRED_AT.load(Ordering::SeqCst);
+
+    if now_ms().saturating_sub(acquired_at) > CHAT_ROUND_STALE_MS {
+        // 陈旧锁接管：换 token，旧持有者迟到的 end 因 token 不匹配自然失效
+        CHAT_ROUND_TOKEN.store(token, Ordering::SeqCst);
+
+        CHAT_ROUND_ACQUIRED_AT.store(now_ms(), Ordering::SeqCst);
+
+        return Some(token);
+    }
+
+    None
+}
+
+/// 归还对话轮次：仅当 token 与当前持有者一致时生效。
+#[tauri::command]
+pub fn chat_round_end(token: u32) {
+    if CHAT_ROUND_TOKEN.load(Ordering::SeqCst) == token {
+        CHAT_ROUND_ACTIVE.store(false, Ordering::SeqCst);
+    }
 }
 
 /// 距上次系统输入（键鼠任意操作）的秒数，供主动搭话的空闲判定。

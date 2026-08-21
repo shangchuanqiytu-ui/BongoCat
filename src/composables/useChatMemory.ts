@@ -10,7 +10,7 @@ import { INVOKE_KEY } from '../constants'
 /**
  * 兔兔的跨会话记忆（参考 OpenClaw 的记忆架构，为单人桌宠裁剪）：
  *
- * - history.jsonl  完整对话史，append-only 永不删（Layer 0）
+ * - history.jsonl  工作文件（Layer 0）：最近对话，超 4000 行轮转归档到 history-archive.jsonl
  * - diary/日期.md  每日日志：每轮对话机械追加（零 LLM，等价 OpenClaw 的 session-memory hook）
  * - digest.md      滚动摘要：8 轮窗口挤出的轮次 re-distill 进来（唯一的压缩 LLM 调用）
  * - memory.md      长期记忆：空闲"做梦"时从 diary 确定性打分晋级（零 LLM）
@@ -269,20 +269,23 @@ export async function syncMemoryFromDisk() {
 }
 
 /**
- * 跨窗口对话轮次互斥（Rust 侧 AtomicBool CAS，全进程共享）：
+ * 跨窗口对话轮次互斥（Rust 侧 token 锁，全进程共享）：
  * 同一时刻只允许一轮 ask（读快照→LLM→落盘）在飞，后到窗口自旋等待，
- * 消除多窗口并发的读快照竞态——等价 OpenClaw 的会话所有权/文件锁语义，
- * 但我们所有窗口同进程，进程退出锁即消失，无需它的过期偷锁逻辑。
+ * 消除多窗口并发的读快照竞态——等价 OpenClaw 的会话所有权/文件锁语义。
+ * begin 返回本次 token，end 只认 token：IPC 抖动没抢到就不会误归还（不偷别窗的锁）；
+ * 持锁超 120s（webview 崩溃 finally 丢失）Rust 侧自动接管。
  * 等待超时（对端异常挂死）则降级为无锁执行：宁可冒竞态也不丢用户消息。
  */
 export async function withChatRoundLock<T>(task: () => Promise<T>, timeoutMs = 75_000): Promise<T> {
   const deadline = Date.now() + timeoutMs
 
-  let locked = false
+  let token: number | undefined
 
   while (Date.now() < deadline) {
-    if (await invoke<boolean>(INVOKE_KEY.CHAT_ROUND_BEGIN).catch(() => true)) {
-      locked = true
+    const acquired = await invoke<number | null>(INVOKE_KEY.CHAT_ROUND_BEGIN).catch(() => null)
+
+    if (acquired !== null && acquired !== undefined) {
+      token = acquired
 
       break
     }
@@ -293,18 +296,26 @@ export async function withChatRoundLock<T>(task: () => Promise<T>, timeoutMs = 7
   try {
     return await task()
   } finally {
-    if (locked) void invoke(INVOKE_KEY.CHAT_ROUND_END).catch(() => {})
+    if (token !== undefined) {
+      // 归还失败重试一次（归还丢失会触发 120s 偷锁自愈，但尽量主动还）
+      await invoke(INVOKE_KEY.CHAT_ROUND_END, { token }).catch(() => invoke(INVOKE_KEY.CHAT_ROUND_END, { token }).catch(() => {}))
+    }
   }
 }
 
-/** 启动时恢复最近 N 轮对话（Layer 0：重启不清零） */
-export async function loadPersistedRounds(maxMessages: number) {
+/**
+ * 启动时恢复最近 N 轮对话（Layer 0：重启不清零）。
+ * rotate=true 才做轮转且必须在对话锁内调用（ask 路径）：
+ * 锁外轮转（启动恢复）的重写可能与锁内 recordRound 追加并发，覆盖丢行。
+ */
+export async function loadPersistedRounds(maxMessages: number, options?: { rotate?: boolean }) {
   await initChatMemory()
 
   const allLines = (await readTextIfExists(HISTORY_FILE)).split('\n').filter(Boolean)
 
-  // 轮转：超限把前段挪进归档文件（diary 是每轮的永久归档，这里只是工作文件瘦身）
-  if (allLines.length > HISTORY_MAX_LINES) {
+  // 轮转：超限把前段挪进归档文件（diary 是每轮的永久归档，这里只是工作文件瘦身）。
+  // 顺序取舍：先归档后重写——重写失败只是归档重复（可容忍），反过来会丢段（不可容忍）
+  if (options?.rotate && allLines.length > HISTORY_MAX_LINES) {
     const kept = allLines.slice(-HISTORY_KEEP_LINES)
 
     const archived = allLines.slice(0, allLines.length - HISTORY_KEEP_LINES)
@@ -438,10 +449,19 @@ async function callLlm(system: string, user: string, maxTokens: number) {
  * 窗口溢出压缩：被挤出的轮次 + 旧摘要 re-distill 成新摘要。
  * 失败重试一次，仍失败则保留旧摘要（宁可不动也不压丢）。
  */
+/** 同窗快速连发时，排队等当前蒸馏完成后补跑（挤出的轮次不丢摘要机会） */
+let pendingDropped: ChatMessage[] = []
+
 export async function refreshDigest(dropped: ChatMessage[]) {
   const aiStore = useAiStore()
 
-  if (!aiStore.memoryEnabled || digestRefreshing || !dropped.length) return
+  if (!aiStore.memoryEnabled || !dropped.length) return
+
+  if (digestRefreshing) {
+    pendingDropped.push(...dropped)
+
+    return
+  }
 
   digestRefreshing = true
 
@@ -450,6 +470,8 @@ export async function refreshDigest(dropped: ChatMessage[]) {
 
     // 以盘上最新摘要为 base 蒸馏（其他窗口可能刚写入），缩小跨窗覆盖窗口
     await readStateFromDisk()
+
+    const baseAtStart = digest.value
 
     const conversation = dropped.map(m => `${m.role === 'user' ? '博士' : '兔兔'}：${m.content}`).join('\n')
 
@@ -467,7 +489,12 @@ export async function refreshDigest(dropped: ChatMessage[]) {
           continue
         }
 
-        digest.value = truncateHead(summary, DIGEST_MAX)
+        // 写前查盘：别窗蒸馏期间写入过 → 双段并存保住对方贡献，下次蒸馏自带合并去重
+        const currentOnDisk = (await readTextIfExists(DIGEST_FILE)).trim()
+
+        const merged = currentOnDisk && currentOnDisk !== baseAtStart ? `${currentOnDisk}\n\n${summary}` : summary
+
+        digest.value = truncateHead(merged, DIGEST_MAX)
 
         await writeTextFile(DIGEST_FILE, `${digest.value}\n`, FS_OPTS)
 
@@ -478,6 +505,14 @@ export async function refreshDigest(dropped: ChatMessage[]) {
     }
   } finally {
     digestRefreshing = false
+
+    if (pendingDropped.length) {
+      const next = pendingDropped
+
+      pendingDropped = []
+
+      void refreshDigest(next)
+    }
   }
 }
 
