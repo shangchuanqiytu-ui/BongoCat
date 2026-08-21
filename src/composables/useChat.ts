@@ -83,6 +83,34 @@ let holdBubble = false
 /** 情绪标签协议格式：`[害羞]`/`【害羞】` 开头（名字限长防误吞正文里的方括号） */
 const EMOTION_TAG_RE = /^\s*[【[]([^】\]]{1,12})[】\]]\s*/
 
+/** 最近一次对话情绪（闲时行为借它做"情绪延续"：刚聊完开心，之后几分钟偶尔冒微笑） */
+export const lastEmotion = ref<{ name: string, at: number }>()
+
+/** 纯特效型表情（舞台灯光/背景/音符等）——不是情绪脸，进候选池只会干扰模型选择 */
+const NON_EMOTION_EXPRESSIONS = new Set([
+  '复位',
+  '蓝色灯光',
+  '黄色灯光',
+  '红色灯光',
+  '背景出场',
+  '粉色音符',
+  '蓝色音符',
+  '翻手',
+])
+
+/** 对话动作标签的中文→动作组映射（组名即 model3.json 的 Motions key） */
+const MOTION_LABELS: Record<string, string> = {
+  挥手: 'wave',
+  点头: 'nod',
+  摇头: 'shake',
+  歪头: 'tilt',
+  庆祝: 'celebrate',
+  打哈欠: 'yawn',
+  伸懒腰: 'stretch',
+  蹦跳: 'hop',
+  弹奏: 'music',
+}
+
 let initialized = false
 
 function clearTypewriter() {
@@ -200,9 +228,13 @@ export function useChat() {
         const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2, { rotate: true }), syncMemoryFromDisk()])
 
         // 历史回复展示/落盘时已剥掉情绪标签，直接喂回会让模型模仿"无标签"格式（多轮格式漂移）；
-        // 给历史 assistant 统一补一个占位标签做 few-shot 锚点，仅存在于本请求，不影响落盘与显示
-        const anchored = aiStore.emotionEnabled
-          ? persisted.map(item => (item.role === 'assistant' ? { ...item, content: `[认真]${item.content}` } : item))
+        // 给历史 assistant 补随机合法标签做 few-shot 锚点（随机而非固定——固定值会让模型"抄答案"，
+        // 每轮都选锚点那对表情/动作；随机化展示"从列表按语境选"的多样性）
+        const exprNames = modelStore.currentExpressions.map(item => item.name).filter(name => !NON_EMOTION_EXPRESSIONS.has(name))
+        const motionNames = Object.keys(MOTION_LABELS)
+        const pickRandom = <T>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
+        const anchored = aiStore.emotionEnabled && exprNames.length && motionNames.length
+          ? persisted.map(item => (item.role === 'assistant' ? { ...item, content: `[${pickRandom(exprNames)}][${pickRandom(motionNames)}]${item.content}` } : item))
           : persisted
 
         const messages = [...anchored, { role: 'user' as const, content: question }]
@@ -215,16 +247,26 @@ export function useChat() {
           messages,
         })
 
-        // 剥情绪标签：匹配协议格式就剥（不该显示给博士）；名字合法才联动表情
+        // 剥情绪/动作标签：匹配协议格式就剥（不该显示给博士）；名字合法才联动播放
         let emotion: string | undefined
+        let motion: string | undefined
 
         if (aiStore.emotionEnabled) {
-          const tag = reply.match(EMOTION_TAG_RE)?.[1]
+          const firstTag = reply.match(EMOTION_TAG_RE)?.[1]
 
-          if (tag) {
+          if (firstTag) {
             reply = reply.replace(EMOTION_TAG_RE, '')
 
-            if (modelStore.currentExpressions.some(item => item.name === tag)) emotion = tag
+            if (modelStore.currentExpressions.some(item => item.name === firstTag)) emotion = firstTag
+
+            // 第二个标签（可选）：动作
+            const secondTag = reply.match(EMOTION_TAG_RE)?.[1]
+
+            if (secondTag) {
+              reply = reply.replace(EMOTION_TAG_RE, '')
+
+              if (MOTION_LABELS[secondTag]) motion = MOTION_LABELS[secondTag]
+            }
           }
         }
 
@@ -238,8 +280,8 @@ export function useChat() {
 
         await recordRound(question, reply)
 
-        // 广播给所有窗口：主窗借此解除挂起气泡，并联动情绪表情（自己的 ask 也统一走这条路径）
-        void emit(LISTEN_KEY.CHAT_ACTIVITY, { label: appWindow.label, emotion })
+        // 广播给所有窗口：主窗借此解除挂起气泡，并联动情绪表情/动作（自己的 ask 也统一走这条路径）
+        void emit(LISTEN_KEY.CHAT_ACTIVITY, { label: appWindow.label, emotion, motion })
 
         void refreshDigest(dropped)
 
@@ -288,20 +330,31 @@ export function useChat() {
   }
 
   /**
-   * 情绪表情协议：模型每次回复开头带 [表情名] 标签，主窗剥标签打字并联动 Live2D 表情。
-   * 标签不会显示给用户（聊天记录/气泡都存剥后的文本）；名字不在表情列表时只剥不播。
+   * 情绪表情协议：模型每次回复开头带 [表情名]（必带），可选紧跟 [动作名]（说拜拜挥手、说加油庆祝）。
+   * 标签不会显示给用户（聊天记录/气泡都存剥后的文本）；名字不在列表时只剥不播。
    * 指令必须写"每次都要带"——实测可选式指令（"不合适就不加"）模型几乎从不带，联动形同虚设。
    */
   function buildEmotionInstruction() {
-    const names = modelStore.currentExpressions.map(item => item.name).filter(name => name !== '复位')
+    const names = modelStore.currentExpressions.map(item => item.name).filter(name => !NON_EMOTION_EXPRESSIONS.has(name))
     if (!names.length) return ''
-    return `\n（情绪表情规则：每次回复的最开头必须带一个情绪标签，格式如"[害羞]"，从这些里选最贴合当下心情的：${names.join('、')}。标签只用于控制你的表情、不会显示给博士，每轮都要带，不要省略。历史消息里的标签是显示时被系统剥掉的，不代表当时没带——别受历史影响。）`
+    const motions = Object.keys(MOTION_LABELS).join('、')
+    return `\n（情绪表情规则：每次回复的最开头必须带一个情绪标签，格式如"[害羞]"，从这些里选最贴合当下心情的：${names.join('、')}。如果动作也合适，可以紧跟第二个标签（可选），如"[害羞][挥手]"，只能从这些里选：${motions}。标签只用于控制你的表情和动作、不会显示给博士，每轮都要带表情标签，不要省略。历史消息里的标签是显示时被系统剥掉的，不代表当时没带——别受历史影响。）`
   }
 
   /** 按名字播表情（表情枚举来自主窗加载模型后写入的 pinia，任意窗口都能查 index，但播只对有模型的窗口生效） */
   function playEmotion(name: string) {
     const index = modelStore.currentExpressions.findIndex(item => item.name === name)
-    if (index >= 0) live2d.setExpression(index)
+    if (index >= 0) {
+      live2d.setExpression(index)
+
+      lastEmotion.value = { name, at: Date.now() }
+    }
+  }
+
+  /** 按组名播动作（模型存在性由 currentMotions 校验；播只对主窗生效） */
+  function playMotion(group: string) {
+    const exists = modelStore.currentMotions?.some(([groupName]) => groupName === group)
+    if (exists) live2d.startMotion({ group, no: 0, name: `${group}_0` })
   }
 
   function buildProactiveInstruction(kind: 'present' | 'returned') {
@@ -394,8 +447,12 @@ export function useChat() {
 
       // 其他窗口（聊天记录窗）来了新对话：博士已经在聊了，解除挂起/正在打的主动搭话气泡
       // （打字中 status 还是 talking，靠 holdBubble 兜住，否则打完会转 awaiting 永挂）
-      useTauriListen<{ label: string, emotion?: string }>(LISTEN_KEY.CHAT_ACTIVITY, ({ payload }) => {
-        if (payload.emotion && aiStore.emotionEnabled) playEmotion(payload.emotion)
+      useTauriListen<{ label: string, emotion?: string, motion?: string }>(LISTEN_KEY.CHAT_ACTIVITY, ({ payload }) => {
+        if (aiStore.emotionEnabled) {
+          if (payload.emotion) playEmotion(payload.emotion)
+
+          if (payload.motion) playMotion(payload.motion)
+        }
 
         if (payload.label !== appWindow.label && (status.value === 'awaiting' || holdBubble)) resetSpeech()
       })

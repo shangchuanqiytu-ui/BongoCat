@@ -1,0 +1,116 @@
+{
+	"Version": 3,
+	"Meta": {
+		"Duration": 2.8,
+		"Fps": 30.0,
+		"Loop": false,
+		"AreBeziersRestricted": true,
+		"CurveCount": 4,
+		"TotalSegmentCount": 12,
+		"TotalPointCount": 32,
+		"UserDataCount": 0,
+		"TotalUserDataSize": 0
+	},
+	"Curves": [
+		{
+			"Target": "Parameter",
+			"Id": "ParamAngleY",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.2,
+				0,
+				0.4,
+				-18,
+				0.6,
+				-18,
+				0,
+				1.8,
+				-18,
+				1,
+				2.067,
+				-18,
+				2.333,
+				0,
+				2.6,
+				0
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Id": "PARAM_BREATH",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.2,
+				0,
+				0.4,
+				1,
+				0.6,
+				1,
+				0,
+				1.8,
+				1,
+				1,
+				2.067,
+				1,
+				2.333,
+				0,
+				2.6,
+				0
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Id": "ParamMouthOpenY",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.267,
+				0,
+				0.533,
+				0.4,
+				0.8,
+				0.4,
+				0,
+				1.6,
+				0.4,
+				1,
+				1.867,
+				0.4,
+				2.133,
+				0,
+				2.4,
+				0
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Id": "ParamAngleX",
+			"Segments": [
+				0,
+				0,
+				1,
+				0.2,
+				0,
+				0.4,
+				6,
+				0.6,
+				6,
+				0,
+				1.8,
+				6,
+				1,
+				2.067,
+				6,
+				2.333,
+				0,
+				2.6,
+				0
+			]
+		}
+	]
+}

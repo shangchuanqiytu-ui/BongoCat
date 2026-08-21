@@ -13,8 +13,10 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { useAppMenu } from '@/composables/useAppMenu'
 import { useChat } from '@/composables/useChat'
 import { useHoverHide } from '@/composables/useHoverHide'
+import { useIdleBehavior } from '@/composables/useIdleBehavior'
 import { useKeyPress } from '@/composables/useKeyPress'
 import { useModel } from '@/composables/useModel'
+import { useStroll } from '@/composables/useStroll'
 import { useTauriListen } from '@/composables/useTauriListen'
 import { LISTEN_KEY } from '@/constants'
 import { hideWindow, setAlwaysOnTop, setTaskbarVisibility, showWindow } from '@/plugins/window'
@@ -41,6 +43,12 @@ const aiStore = useAiStore()
 const chat = useChat()
 
 useHoverHide()
+
+// 闲时行为：小动作随机轮换 + 时段权重 + 情绪延续（只在主窗跑）
+useIdleBehavior()
+
+// 散步：人离开久了低概率沿屏幕底边溜达（只在主窗跑）
+useStroll()
 
 // AI 对话唤起快捷键（总开关关闭时不注册）
 useKeyPress(computed(() => {

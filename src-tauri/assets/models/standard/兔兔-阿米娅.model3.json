@@ -191,6 +191,41 @@
           "File": "motion-wave.motion3.json"
         }
       ],
+      "stretch": [
+        {
+          "File": "motion-idle-stretch.motion3.json"
+        }
+      ],
+      "lookaround": [
+        {
+          "File": "motion-idle-lookaround.motion3.json"
+        }
+      ],
+      "wiggle": [
+        {
+          "File": "motion-idle-wiggle.motion3.json"
+        }
+      ],
+      "yawn": [
+        {
+          "File": "motion-idle-yawn.motion3.json"
+        }
+      ],
+      "hop": [
+        {
+          "File": "motion-idle-hop.motion3.json"
+        }
+      ],
+      "crouch": [
+        {
+          "File": "motion-idle-crouch.motion3.json"
+        }
+      ],
+      "hungry": [
+        {
+          "File": "motion-idle-hungry.motion3.json"
+        }
+      ],
       "Idle": [
         {
           "File": "motion-idle.motion3.json"
