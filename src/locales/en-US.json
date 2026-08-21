@@ -27,6 +27,7 @@
         "labels": {
           "chatSettings": "Chat Settings",
           "enabled": "Enable AI Chat",
+          "emotion": "Emotion Expressions",
           "proactive": "Proactive Chat",
           "apiSettings": "API Settings",
           "apiUrl": "API URL",
@@ -43,6 +44,7 @@
         },
         "hints": {
           "enabled": "When enabled, click the pet or press the shortcut to chat.",
+          "emotion": "The bunny's replies automatically come with matching expressions.",
           "proactive": "When enabled, the bunny will start a chat while you are idle.",
           "apiUrl": "Chat API endpoint (Anthropic Messages protocol relay).",
           "systemPersona": "Defines the bunny's personality and speaking style.",

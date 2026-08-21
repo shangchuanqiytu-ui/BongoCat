@@ -12,6 +12,8 @@ export interface AiStore {
   systemPersona: string
   /** 跨会话记忆（diary/digest/memory 做梦链路总开关） */
   memoryEnabled: boolean
+  /** 回复自动配表情（[表情名] 标签协议，主窗解析后联动 Live2D 表情） */
+  emotionEnabled: boolean
   proactive: {
     /** 定时主动搭话开关 */
     enabled: boolean
@@ -35,6 +37,8 @@ export const useAiStore = defineStore('ai', () => {
 
   const memoryEnabled = ref(true)
 
+  const emotionEnabled = ref(true)
+
   const proactive = reactive<AiStore['proactive']>({
     enabled: true,
     minInterval: 25,
@@ -47,6 +51,7 @@ export const useAiStore = defineStore('ai', () => {
     apiUrl,
     systemPersona,
     memoryEnabled,
+    emotionEnabled,
     proactive,
   }
 })

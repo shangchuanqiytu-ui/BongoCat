@@ -27,6 +27,7 @@
         "labels": {
           "chatSettings": "对话设置",
           "enabled": "启用 AI 对话",
+          "emotion": "情绪表情",
           "proactive": "主动搭话",
           "apiSettings": "接口设置",
           "apiUrl": "API 地址",
@@ -43,6 +44,7 @@
         },
         "hints": {
           "enabled": "启用后，点击宠物或按快捷键即可对话。",
+          "emotion": "兔兔说话时会自动配上对应的表情。",
           "proactive": "启用后，兔兔会在你长时间空闲时主动找你聊天。",
           "apiUrl": "对话接口地址（Anthropic Messages 协议中转）。",
           "systemPersona": "定义兔兔的性格与说话风格。",

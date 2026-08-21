@@ -108,6 +108,13 @@ async function onDream() {
     </ProListItem>
 
     <ProListItem
+      :description="$t('pages.preference.ai.hints.emotion')"
+      :title="$t('pages.preference.ai.labels.emotion')"
+    >
+      <Switch v-model:checked="aiStore.emotionEnabled" />
+    </ProListItem>
+
+    <ProListItem
       :description="$t('pages.preference.ai.hints.proactive')"
       :title="$t('pages.preference.ai.labels.proactive')"
     >

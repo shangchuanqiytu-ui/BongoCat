@@ -9,6 +9,7 @@ import { onUnmounted, ref, watch } from 'vue'
 import { i18n } from '@/locales'
 import { useAiStore } from '@/stores/ai'
 import { useGeneralStore } from '@/stores/general'
+import { useModelStore } from '@/stores/model'
 import live2d from '@/utils/live2d'
 
 import { INVOKE_KEY, LISTEN_KEY, WINDOW_LABEL } from '../constants'
@@ -78,6 +79,9 @@ let pendingProactiveGreeting = false
 
 /** 本轮（主动搭话）的气泡打完要挂起等互动：跨窗事件在打字中到达时按此判定收起 */
 let holdBubble = false
+
+/** 情绪标签协议格式：`[害羞]`/`【害羞】` 开头（名字限长防误吞正文里的方括号） */
+const EMOTION_TAG_RE = /^\s*[【[]([^】\]]{1,12})[】\]]\s*/
 
 let initialized = false
 
@@ -171,6 +175,7 @@ function resetSpeech() {
 export function useChat() {
   const aiStore = useAiStore()
   const generalStore = useGeneralStore()
+  const modelStore = useModelStore()
 
   /**
    * 发起一轮对话。hold=true（主动搭话）说完保持挂起等博士回复/跳过；
@@ -196,11 +201,24 @@ export function useChat() {
 
         const messages = [...persisted, { role: 'user' as const, content: question }]
 
-        const reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
+        let reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
           apiUrl: aiStore.apiUrl,
-          system: buildSystemPrompt(aiStore.systemPersona),
+          system: buildSystemPrompt(aiStore.systemPersona) + (aiStore.emotionEnabled ? buildEmotionInstruction() : ''),
           messages,
         })
+
+        // 剥情绪标签：匹配协议格式就剥（不该显示给博士）；名字合法才联动表情
+        let emotion: string | undefined
+
+        if (aiStore.emotionEnabled) {
+          const tag = reply.match(EMOTION_TAG_RE)?.[1]
+
+          if (tag) {
+            reply = reply.replace(EMOTION_TAG_RE, '')
+
+            if (modelStore.currentExpressions.some(item => item.name === tag)) emotion = tag
+          }
+        }
 
         const nextHistory = [...messages, { role: 'assistant' as const, content: reply }]
 
@@ -211,8 +229,8 @@ export function useChat() {
 
         await recordRound(question, reply)
 
-        // 广播给其他窗口（主窗借此解除挂起的主动搭话气泡）
-        void emit(LISTEN_KEY.CHAT_ACTIVITY, appWindow.label)
+        // 广播给所有窗口：主窗借此解除挂起气泡，并联动情绪表情（自己的 ask 也统一走这条路径）
+        void emit(LISTEN_KEY.CHAT_ACTIVITY, { label: appWindow.label, emotion })
 
         void refreshDigest(dropped)
 
@@ -258,6 +276,22 @@ export function useChat() {
     showWindow()
 
     inputVisible.value = true
+  }
+
+  /**
+   * 情绪表情协议：模型可在回复开头带 [表情名] 标签，主窗剥标签打字并联动 Live2D 表情。
+   * 标签不会显示给用户（聊天记录/气泡都存剥后的文本）；名字不在表情列表时只剥不播。
+   */
+  function buildEmotionInstruction() {
+    const names = modelStore.currentExpressions.map(item => item.name).filter(name => name !== '复位')
+    if (!names.length) return ''
+    return `\n（情绪表情：想让说话带表情时，在回复最开头加一个标签，格式如"[害羞]"，只能从这些里选：${names.join('、')}；不合适就不加。标签不会显示给博士，放心用。）`
+  }
+
+  /** 按名字播表情（表情枚举来自主窗加载模型后写入的 pinia，任意窗口都能查 index，但播只对有模型的窗口生效） */
+  function playEmotion(name: string) {
+    const index = modelStore.currentExpressions.findIndex(item => item.name === name)
+    if (index >= 0) live2d.setExpression(index)
   }
 
   function buildProactiveInstruction(kind: 'present' | 'returned') {
@@ -350,8 +384,10 @@ export function useChat() {
 
       // 其他窗口（聊天记录窗）来了新对话：博士已经在聊了，解除挂起/正在打的主动搭话气泡
       // （打字中 status 还是 talking，靠 holdBubble 兜住，否则打完会转 awaiting 永挂）
-      useTauriListen(LISTEN_KEY.CHAT_ACTIVITY, ({ payload }) => {
-        if (payload !== appWindow.label && (status.value === 'awaiting' || holdBubble)) resetSpeech()
+      useTauriListen<{ label: string, emotion?: string }>(LISTEN_KEY.CHAT_ACTIVITY, ({ payload }) => {
+        if (payload.emotion && aiStore.emotionEnabled) playEmotion(payload.emotion)
+
+        if (payload.label !== appWindow.label && (status.value === 'awaiting' || holdBubble)) resetSpeech()
       })
 
       useEventListener(window, 'blur', () => {
