@@ -199,7 +199,13 @@ export function useChat() {
         // 先从盘上同步：聊天窗/宠物窗共用磁盘态，历史与记忆都以盘为准（锁内轮转）
         const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2, { rotate: true }), syncMemoryFromDisk()])
 
-        const messages = [...persisted, { role: 'user' as const, content: question }]
+        // 历史回复展示/落盘时已剥掉情绪标签，直接喂回会让模型模仿"无标签"格式（多轮格式漂移）；
+        // 给历史 assistant 统一补一个占位标签做 few-shot 锚点，仅存在于本请求，不影响落盘与显示
+        const anchored = aiStore.emotionEnabled
+          ? persisted.map(item => (item.role === 'assistant' ? { ...item, content: `[认真]${item.content}` } : item))
+          : persisted
+
+        const messages = [...anchored, { role: 'user' as const, content: question }]
 
         let reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
           apiUrl: aiStore.apiUrl,
@@ -222,7 +228,8 @@ export function useChat() {
           }
         }
 
-        const nextHistory = [...messages, { role: 'assistant' as const, content: reply }]
+        // 内存历史保持干净（不带锚点前缀）；锚点只存在于上方的 LLM 请求里
+        const nextHistory = [...persisted, { role: 'user' as const, content: question }, { role: 'assistant' as const, content: reply }]
 
         // 窗口溢出的轮次先落盘（diary），再 re-distill 进滚动摘要（内部自带质量守卫）
         const dropped = nextHistory.slice(0, Math.max(0, nextHistory.length - HISTORY_ROUNDS * 2))
@@ -281,13 +288,14 @@ export function useChat() {
   }
 
   /**
-   * 情绪表情协议：模型可在回复开头带 [表情名] 标签，主窗剥标签打字并联动 Live2D 表情。
+   * 情绪表情协议：模型每次回复开头带 [表情名] 标签，主窗剥标签打字并联动 Live2D 表情。
    * 标签不会显示给用户（聊天记录/气泡都存剥后的文本）；名字不在表情列表时只剥不播。
+   * 指令必须写"每次都要带"——实测可选式指令（"不合适就不加"）模型几乎从不带，联动形同虚设。
    */
   function buildEmotionInstruction() {
     const names = modelStore.currentExpressions.map(item => item.name).filter(name => name !== '复位')
     if (!names.length) return ''
-    return `\n（情绪表情：想让说话带表情时，在回复最开头加一个标签，格式如"[害羞]"，只能从这些里选：${names.join('、')}；不合适就不加。标签不会显示给博士，放心用。）`
+    return `\n（情绪表情规则：每次回复的最开头必须带一个情绪标签，格式如"[害羞]"，从这些里选最贴合当下心情的：${names.join('、')}。标签只用于控制你的表情、不会显示给博士，每轮都要带，不要省略。历史消息里的标签是显示时被系统剥掉的，不代表当时没带——别受历史影响。）`
   }
 
   /** 按名字播表情（表情枚举来自主窗加载模型后写入的 pinia，任意窗口都能查 index，但播只对有模型的窗口生效） */

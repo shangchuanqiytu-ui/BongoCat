@@ -437,8 +437,12 @@ function auditDigest(summary: string, dropped: ChatMessage[]) {
 }
 
 async function callLlm(system: string, user: string, maxTokens: number) {
+  const aiStore = useAiStore()
+
   return invoke<string>(INVOKE_KEY.AI_CHAT, {
-    apiUrl: useAiStore().apiUrl,
+    apiUrl: aiStore.apiUrl,
+    apiKey: aiStore.apiKey,
+    model: aiStore.model,
     system,
     messages: [{ role: 'user', content: user }],
     maxTokens,
