@@ -80,13 +80,10 @@ let pendingProactiveGreeting = false
 /** 本轮（主动搭话）的气泡打完要挂起等互动：跨窗事件在打字中到达时按此判定收起 */
 let holdBubble = false
 
-/** 情绪标签协议格式：`[害羞]`/`【害羞】` 开头（名字限长防误吞正文里的方括号） */
-const EMOTION_TAG_RE = /^\s*[【[]([^】\]]{1,12})[】\]]\s*/
-
 /** 最近一次对话情绪（闲时行为借它做"情绪延续"：刚聊完开心，之后几分钟偶尔冒微笑） */
 export const lastEmotion = ref<{ name: string, at: number }>()
 
-/** 纯特效/道具型表情（舞台灯光/背景/音符/饭碗等）——不是情绪脸，进候选池只会干扰模型选择 */
+/** 纯特效/道具型表情（舞台灯光/背景/音符/饭碗等）——不是情绪脸，进工具候选只会干扰模型选择 */
 const NON_EMOTION_EXPRESSIONS = new Set([
   '复位',
   '蓝色灯光',
@@ -103,17 +100,23 @@ const NON_EMOTION_EXPRESSIONS = new Set([
   '吃饭',
 ])
 
-/** 对话动作标签的中文→动作组映射（组名即 model3.json 的 Motions key） */
-const MOTION_LABELS: Record<string, string> = {
-  挥手: 'wave',
-  点头: 'nod',
-  摇头: 'shake',
-  歪头: 'tilt',
-  庆祝: 'celebrate',
-  打哈欠: 'yawn',
-  伸懒腰: 'stretch',
-  蹦跳: 'hop',
-  弹奏: 'music',
+/** 可被对话工具调用的动作组（model3.json 的 Motions key），描述即给模型的语义指引 */
+const MOTION_CHOICES = [
+  { id: 'hop', desc: '原地蹦跳。博士说跳、蹦、跑、运动、活动时都用这个' },
+  { id: 'wave', desc: '挥手告别、打招呼' },
+  { id: 'nod', desc: '点头（同意、应允）' },
+  { id: 'shake', desc: '摇头（拒绝、否定）' },
+  { id: 'tilt', desc: '歪头（好奇、疑惑）' },
+  { id: 'celebrate', desc: '庆祝欢呼（好消息、成功）' },
+  { id: 'yawn', desc: '打哈欠（困倦、深夜）' },
+  { id: 'stretch', desc: '伸懒腰（放松、刚睡醒）' },
+  { id: 'music', desc: '弹琴演奏，音符环绕。仅当聊到唱歌、音乐、乐器、跳舞时才用' },
+] as const
+
+/** 工具调用协议（Anthropic tool use）：模型按 schema 语义自主决定调表情/动作，替代早期的回复开头标签约定 */
+interface ToolUse {
+  name: string
+  input: { motion?: string, expression?: string } & Record<string, unknown>
 }
 
 let initialized = false
@@ -246,65 +249,78 @@ export function useChat() {
         // 先从盘上同步：聊天窗/宠物窗共用磁盘态，历史与记忆都以盘为准（锁内轮转）
         const [persisted] = await Promise.all([loadPersistedRounds(HISTORY_ROUNDS * 2, { rotate: true }), syncMemoryFromDisk()])
 
-        // 历史回复展示/落盘时已剥掉情绪标签，直接喂回会让模型模仿"无标签"格式（多轮格式漂移）；
-        // 给历史 assistant 补随机合法标签做 few-shot 锚点（随机而非固定——固定值会让模型"抄答案"；
-        // 动作标签按协议是可选的，锚点也 50% 只带表情，避免模型把双标签当必选、把标签写进正文中间）
+        // 工具调用的多轮漂移（与标签协议同构）：历史纯文本让模型模仿"光说话不调工具"，几轮后调用率衰减到零。
+        // 给历史注入伪 tool_use（assistant 数组 content）+ 配对 tool_result（user 数组 content 头部），
+        // 协议完整、只存在于本次请求；落盘历史保持纯文本
         const exprNames = modelStore.currentExpressions.map(item => item.name).filter(name => !NON_EMOTION_EXPRESSIONS.has(name))
-        const motionNames = Object.keys(MOTION_LABELS)
+        const motionIds = MOTION_CHOICES.map(choice => choice.id)
         const pickRandom = <T>(list: T[]): T => list[Math.floor(Math.random() * list.length)]
-        const anchored = aiStore.emotionEnabled && exprNames.length && motionNames.length
-          ? persisted.map((item) => {
+
+        const anchored = aiStore.emotionEnabled && exprNames.length
+          ? persisted.map((item, index) => {
               if (item.role !== 'assistant') return item
 
-              const tags = Math.random() < 0.5 ? `[${pickRandom(exprNames)}]` : `[${pickRandom(exprNames)}][${pickRandom(motionNames)}]`
+              const calls: Array<Record<string, unknown>> = [
+                { type: 'tool_use', id: `hist-${index}-e`, name: 'set_expression', input: { expression: pickRandom(exprNames) } },
+              ]
 
-              return { ...item, content: `${tags}${item.content}` }
+              if (Math.random() < 0.5 && motionIds.length) {
+                calls.push({ type: 'tool_use', id: `hist-${index}-m`, name: 'play_motion', input: { motion: pickRandom(motionIds) } })
+              }
+
+              return { role: 'assistant' as const, content: [...calls, { type: 'text', text: item.content }] }
             })
           : persisted
 
-        const messages = [...anchored, { role: 'user' as const, content: question }]
+        const messages = [...anchored.map((item, index) => {
+          const next = anchored[index + 1]
+
+          // assistant 带伪 tool_use 时，其后的 user 消息头部补配对 tool_result（协议要求）
+          if (item.role === 'user' && Array.isArray(next?.content)) {
+            const ids = (next.content as Array<{ type: string, id?: string }>).filter(block => block.type === 'tool_use' && block.id).map(block => block.id)
+
+            const results = ids.map(id => ({ type: 'tool_result', tool_use_id: id, content: 'done' }))
+
+            return { role: 'user' as const, content: [...results, { type: 'text', text: item.content }] }
+          }
+
+          return item
+        }), { role: 'user' as const, content: question }]
 
         // key 每轮直读凭据管理器：偏好窗改 key 后本窗（模块实例各窗一份）立即拿到新值
         const apiKey = await invoke<string | null>(INVOKE_KEY.GET_API_KEY).catch(() => null) ?? ''
 
-        let reply = await invoke<string>(INVOKE_KEY.AI_CHAT, {
+        const tools = aiStore.emotionEnabled ? buildTools() : undefined
+
+        const outcome = await invoke<{ text: string, toolUses: ToolUse[] }>(INVOKE_KEY.AI_CHAT, {
           apiUrl: aiStore.apiUrl,
           apiKey,
           model: aiStore.model,
-          system: buildSystemPrompt(aiStore.systemPersona) + (aiStore.emotionEnabled ? buildEmotionInstruction() : ''),
+          system: buildSystemPrompt(aiStore.systemPersona) + (aiStore.emotionEnabled ? buildToolInstruction() : ''),
           messages,
+          tools,
+          maxTokens: 500,
         })
 
-        // 剥情绪/动作标签：匹配协议格式就剥（不该显示给博士）；名字合法才联动播放
+        let reply = outcome.text
+
+        // 模型只调工具不说话（stop_reason=tool_use 且无正文）的兜底：给一句默认台词
+        if (!reply) reply = '（兔兔动了动～）'
+
+        // 解析工具调用：表情名查当前注册表，动作 id 查选择表，非法值忽略
         let emotion: string | undefined
         let motion: string | undefined
 
         if (aiStore.emotionEnabled) {
-          const firstTag = reply.match(EMOTION_TAG_RE)?.[1]
-
-          if (firstTag) {
-            reply = reply.replace(EMOTION_TAG_RE, '')
-
-            if (modelStore.currentExpressions.some(item => item.name === firstTag)) emotion = firstTag
-
-            // 第二个标签（可选）：动作
-            const secondTag = reply.match(EMOTION_TAG_RE)?.[1]
-
-            if (secondTag) {
-              reply = reply.replace(EMOTION_TAG_RE, '')
-
-              if (MOTION_LABELS[secondTag]) motion = MOTION_LABELS[secondTag]
+          for (const call of outcome.toolUses ?? []) {
+            if (call.name === 'set_expression' && call.input.expression) {
+              if (modelStore.currentExpressions.some(item => item.name === call.input.expression)) emotion = call.input.expression
+            } else if (call.name === 'play_motion' && call.input.motion) {
+              if (MOTION_CHOICES.some(choice => choice.id === call.input.motion)) motion = call.input.motion
             }
           }
-
-          // 模型偶尔把标签写进正文中间（锚点式 few-shot 会抬高这个概率）：
-          // 正文里恰好等于合法表情/动作名的方括号标签一并剥掉，只剥合法名、不误伤普通方括号
-          const validTagNames = [...exprNames, ...motionNames]
-          const strayTagRe = new RegExp(`\\s*[【[](?:${validTagNames.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})[】\]]`, 'g')
-          reply = reply.replace(strayTagRe, '')
         }
 
-        // 内存历史保持干净（不带锚点前缀）；锚点只存在于上方的 LLM 请求里
         const nextHistory = [...persisted, { role: 'user' as const, content: question }, { role: 'assistant' as const, content: reply }]
 
         // 窗口溢出的轮次先落盘（diary），再 re-distill 进滚动摘要（内部自带质量守卫）
@@ -364,15 +380,43 @@ export function useChat() {
   }
 
   /**
-   * 情绪表情协议：模型每次回复开头带 [表情名]（必带），可选紧跟 [动作名]（说拜拜挥手、说加油庆祝）。
-   * 标签不会显示给用户（聊天记录/气泡都存剥后的文本）；名字不在列表时只剥不播。
-   * 指令必须写"每次都要带"——实测可选式指令（"不合适就不加"）模型几乎从不带，联动形同虚设。
+   * 渐进式工具指引（写在 system 里，与工具 schema 描述互补——实测只靠 schema 描述模型仍会选错动作，
+   * 如"跑起来"选 wave；system 层再明确一次语义映射才稳）。
    */
-  function buildEmotionInstruction() {
+  function buildToolInstruction() {
     const names = modelStore.currentExpressions.map(item => item.name).filter(name => !NON_EMOTION_EXPRESSIONS.has(name))
     if (!names.length) return ''
-    const motions = Object.keys(MOTION_LABELS).join('、')
-    return `\n（情绪表情规则：每次回复的最开头必须带一个情绪标签，格式如"[害羞]"，从这些里选最贴合当下心情的：${names.join('、')}。如果动作也合适，可以紧跟第二个标签（可选），如"[害羞][挥手]"，只能从这些里选：${motions}。标签只用于控制你的表情和动作、不会显示给博士，每轮都要带表情标签，不要省略。历史消息里的标签是显示时被系统剥掉的，不代表当时没带——别受历史影响。）`
+    return `\n\n（你有两个工具控制自己的表情和动作，规则：
+① 每轮回复都要调用 set_expression，从这些表情里选最贴合心情的：${names.join('、')}。
+② 博士要求你表演动作、或语境非常合适时调用 play_motion，语义严格对应：${MOTION_CHOICES.map(m => `${m.desc.split('。')[0]}→${m.id}`).join('；')}。没有贴切的就不调用，不要硬选。
+③ 工具调用不代替说话——每轮都要正常回复一两句话。）`
+  }
+
+  /** Anthropic tools schema（表情 enum 动态来自当前模型注册表） */
+  function buildTools() {
+    const names = modelStore.currentExpressions.map(item => item.name).filter(name => !NON_EMOTION_EXPRESSIONS.has(name))
+    if (!names.length) return undefined
+
+    return [
+      {
+        name: 'set_expression',
+        description: `改变脸上的表情（几秒后自动恢复）。每轮回复都应调用一次，选最贴合当下心情的表情。可选：${names.join('、')}`,
+        input_schema: {
+          type: 'object',
+          properties: { expression: { type: 'string', description: '表情名', enum: names } },
+          required: ['expression'],
+        },
+      },
+      {
+        name: 'play_motion',
+        description: `做一个全身动作，仅在博士要求表演或语境非常合适时调用。动作语义：${MOTION_CHOICES.map(m => `${m.id}=${m.desc}`).join('；')}`,
+        input_schema: {
+          type: 'object',
+          properties: { motion: { type: 'string', description: '动作 id', enum: MOTION_CHOICES.map(m => m.id) } },
+          required: ['motion'],
+        },
+      },
+    ]
   }
 
   /** 按名字播表情（表情枚举来自主窗加载模型后写入的 pinia，任意窗口都能查 index，但播只对有模型的窗口生效） */

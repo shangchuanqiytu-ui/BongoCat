@@ -442,7 +442,7 @@ async function callLlm(system: string, user: string, maxTokens: number) {
   // key 直读凭据管理器（跨窗实时正确，模块缓存各窗一份会拿到旧值）
   const apiKey = await invoke<string | null>(INVOKE_KEY.GET_API_KEY).catch(() => null) ?? ''
 
-  return invoke<string>(INVOKE_KEY.AI_CHAT, {
+  const outcome = await invoke<{ text: string }>(INVOKE_KEY.AI_CHAT, {
     apiUrl: aiStore.apiUrl,
     apiKey,
     model: aiStore.model,
@@ -450,6 +450,8 @@ async function callLlm(system: string, user: string, maxTokens: number) {
     messages: [{ role: 'user', content: user }],
     maxTokens,
   })
+
+  return outcome.text
 }
 
 /**
