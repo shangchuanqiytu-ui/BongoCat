@@ -29,19 +29,10 @@ const HISTORY_ROUNDS = 8
 const PROACTIVE_CHECK_INTERVAL = 60_000
 const PROACTIVE_IDLE_SECONDS = 5 * 60
 
-const PROACTIVE_PROMPTS = {
-  zh: [
-    '博士，休息一下眼睛吧～',
-    '博士还要忙多久呀？兔兔陪你～',
-    '博士，要不要喝口水？',
-    '兔兔一直在这里守着博士哦～',
-  ],
-  en: [
-    'Doctor, take a short break~',
-    'How much longer will you work? I will stay with you~',
-    'Doctor, how about some water?',
-    'I have been here watching over you~',
-  ],
+/** 主动搭话不再用固定台词，让模型结合记忆自由发挥；指令会留在对话史里帮它避免重复 */
+const PROACTIVE_INSTRUCTIONS = {
+  zh: '（主动搭话时机：博士有一会儿没碰电脑了，兔兔想主动说句话，博士回来就会看到。结合你对博士的长期记忆和最近聊过的事——比如关心之前提到的话题——或开个新的小话题都可以。不要提"记忆"这类词，不要重复以前主动说过的话，像平常一样自然地说一两句。）',
+  en: '(Proactive moment: the Doctor has been away for a while. Say something they will see when they return — you may follow up on something from your long-term memory or recent chats, or start a light new topic. Do not mention "memory", do not repeat your previous openers, keep it natural and short.)',
 }
 
 // —— 模块级单例状态：对话是临时态，刻意不进 Pinia（saveOnChange 会把打字机 50ms 状态狂写盘并跨窗同步）
@@ -225,10 +216,8 @@ export function useChat() {
     inputVisible.value = true
   }
 
-  function pickProactivePrompt() {
-    const prompts = generalStore.appearance.language?.startsWith('zh') ? PROACTIVE_PROMPTS.zh : PROACTIVE_PROMPTS.en
-
-    return prompts[Math.floor(Math.random() * prompts.length)]
+  function buildProactiveInstruction() {
+    return generalStore.appearance.language?.startsWith('zh') ? PROACTIVE_INSTRUCTIONS.zh : PROACTIVE_INSTRUCTIONS.en
   }
 
   function scheduleProactive() {
@@ -248,7 +237,7 @@ export function useChat() {
 
     if (idleSeconds !== null && idleSeconds < PROACTIVE_IDLE_SECONDS) return
 
-    void ask(pickProactivePrompt())
+    void ask(buildProactiveInstruction())
   }
 
   /** 每分钟心跳：查一次系统空闲，喂给主动搭话和空闲做梦两条链 */

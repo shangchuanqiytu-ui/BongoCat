@@ -76,7 +76,7 @@ const DIGEST_SECTIONS = ['## 聊过的事', '## 博士的重要事', '## 未决�
 
 const PROMOTED_HEADER_RE = /^## 兔兔记住了 \(\d{4}-\d{2}-\d{2}\)$/gm
 
-const TAINT_PATTERNS = ['兔兔记住了', 'bongocat-memory', ...DIGEST_SECTIONS, '做梦日记']
+const TAINT_PATTERNS = ['兔兔记住了', 'bongocat-memory', ...DIGEST_SECTIONS, '做梦日记', '主动搭话时机', 'Proactive moment']
 
 const DIGEST_SYSTEM_PROMPT = `你是对话压缩器。把【旧摘要】与【被挤出的对话】重新蒸馏成一份新的滚动摘要，供桌面宠物兔兔后续对话参考。要求：
 - 输出固定四个小节，标题逐字为：## 聊过的事 / ## 博士的重要事 / ## 未决话题 / ## 关键细节
